@@ -10,3 +10,5 @@ Text Domain: wpcg
 */
 
 define( 'WPCG_PATH', __DIR__ );
+
+require_once WPCG_PATH . '/WPCG_Customizer_Generator.php';
