@@ -70,6 +70,12 @@ class WPCG_Customizer_Generator {
 	 * @var string
 	 */
 	private $current_setting = '';
+	/**
+	 * Registered settings (by the class) indexed by id
+	 *
+	 * @var array
+	 */
+	private $settings = array();
 
 	/**
 	 * Fields and Methods defaults. Updated on set_defaults
@@ -89,10 +95,6 @@ class WPCG_Customizer_Generator {
 		$defaults = array(
 			'control_mask'          => $this->control_mask,
 			'partial_selector_mask' => $this->partial_selector_mask,
-			'sections'              => array(
-				'theme-settings' => __( 'Theme Options' )
-			),
-			'defaults'              => array(),
 		);
 
 		$settings = array_merge( $defaults, $args );
@@ -103,7 +105,6 @@ class WPCG_Customizer_Generator {
 		$this->control_mask          = $settings['control_mask'];
 		$this->partial_selector_mask = $settings['partial_selector_mask'];
 
-		$this->set_defaults( $settings['defaults'] );
 	}
 
 	public function add_panel( $id = 'theme-panel', $args = array(), $callback = null ) {
@@ -113,11 +114,11 @@ class WPCG_Customizer_Generator {
 			'title' => __( 'Theme' ),
 		);
 
-		// fix indexed arguments and non-array arguments
-		$args = self::parse_indexed_arguments( $args, array( 'title', 'description', 'priority' ) );
-
 		// add new panel
-		Kirki::add_panel( $id, self::parse_arguments( $defaults, $args ) );
+		Kirki::add_panel( $id, self::parse_arguments( $defaults,
+			// fix indexed arguments and non-array arguments
+			self::parse_indexed_arguments( $args, array( 'title', 'priority', 'description' ) )
+		) );
 
 		// update current panel
 		$this->current_panel = $id;
@@ -134,11 +135,11 @@ class WPCG_Customizer_Generator {
 			'panel' => $this->current_panel
 		);
 
-		// fix indexed arguments and non-array arguments
-		$args = self::parse_indexed_arguments( $args, array( 'title', 'description', 'priority' ) );
-
 		// add new panel
-		Kirki::add_section( $id, self::parse_arguments( $defaults, $args ) );
+		Kirki::add_section( $id, self::parse_arguments( $defaults,
+			// fix indexed arguments and non-array arguments
+			self::parse_indexed_arguments( $args, array( 'title', 'description', 'priority' ) )
+		) );
 
 		// update current panel
 		$this->current_section = $id;
@@ -156,7 +157,7 @@ class WPCG_Customizer_Generator {
 		return $this;
 	}
 
-	public function add_control( $id, $args = array() ) {
+	public function add_control( $id = true, $args = array() ) {
 
 		// when true, the current setting will be used
 		if ( $id === true ) {
@@ -171,9 +172,10 @@ class WPCG_Customizer_Generator {
 		}
 
 		$defaults = array(
+			'title'    => $id,
 			'settings' => '',
 			'section'  => $this->current_section,
-			'type'     => ''
+			'type'     => 'text'
 		);
 
 		$args = self::parse_arguments( $defaults,
@@ -183,9 +185,8 @@ class WPCG_Customizer_Generator {
 		// if setting not passed, is presumed that the $id is the setting. The mask is used.
 		if ( ! $args['settings'] ) {
 			$args['settings'] = $id;
+			$id               = sprintf( $this->control_mask, $id );
 		}
-
-		$id = sprintf( $this->control_mask, $id );
 
 		$this->wp_customize->add_control( $id, $args );
 
@@ -206,7 +207,9 @@ class WPCG_Customizer_Generator {
 			self::parse_indexed_arguments( $args, array( 'render_callback', 'selector' ) )
 		);
 
-//		$args['render_callback'] = $this->get_render_callback( $args['render_callback'] );
+		$render = $this->get_render_callback( $args['render_callback'] );
+
+		$args['render_callback'] = $render ? $render : $args['render_callback'];
 
 		return $this;
 	}
@@ -239,6 +242,10 @@ class WPCG_Customizer_Generator {
 		unset( $args['render_callback'] );
 
 		Kirki::add_field( $id, $args );
+
+		$this->settings[ $id ] = $args;
+
+		$this->current_setting = $id;
 
 		return $this;
 
@@ -361,36 +368,27 @@ class WPCG_Customizer_Generator {
 
 	// internal and logic functions
 
-	public function set_defaults( $defaults = array() ) {
-		$base_defaults = array();
-
-		$this->defaults = self::parse_arguments( $base_defaults, $defaults );
-	}
-
 	// Helper Functions
 
 	public function has_partial() {
 		return isset( $this->wp_customize->selective_refresh );
 	}
 
-	private function get_render_callback( $id, $settings = array() ) {
+	private function get_render_callback( $settings = array() ) {
+		if ( is_string( $settings ) ) {
+			$settings = array( 'type' => $settings );
+		}
 		$type = $settings['type'];
 		switch ( $type ) {
 			case 'image':
-				return function () use ( $id, $settings ) {
-					return get_theme_mod( $id ) ? sprintf( '<img src="%s">', get_theme_mod( $id ) ) : false;
-				};
+				return array( $this, 'render_image' );
 			case 'html':
 			case 'code':
 			case 'shortcode':
-				return function () use ( $id, $settings ) {
-					return do_shortcode( (string) get_theme_mod( $id ) );
-				};
+				return array( $this, 'render_html' );
 			case 'text':
 			case 'echo':
-				return function () use ( $id, $settings ) {
-					return esc_html( get_theme_mod( $id ) );
-				};
+				return array( $this, 'render_text' );
 		}
 
 		return '';
@@ -499,5 +497,72 @@ class WPCG_Customizer_Generator {
 		}
 
 		return $arg;
+	}
+
+	/**
+	 * Detect if is a partial and get the setting ID
+	 *
+	 * @param WP_Customize_Partial|string $partial
+	 *
+	 * @return mixed
+	 */
+	static function get_partial_id( $partial ) {
+		if ( is_string( $partial ) ) {
+			return $partial;
+		}
+
+		return $partial->primary_setting;
+	}
+
+	// Render Functions
+
+	/**
+	 * Text Partial Render
+	 *
+	 * @param WP_Customize_Partial $partial
+	 *
+	 * @return string|false
+	 */
+	public function render_text( $partial ) {
+
+		return get_theme_mod( self::get_partial_id( $partial ) );
+	}
+
+	/**
+	 * Text Partial Render
+	 *
+	 * @param WP_Customize_Partial $partial
+	 *
+	 * @return string|false
+	 */
+	public function render_image( $partial ) {
+
+		$value = get_theme_mod( self::get_partial_id( $partial ) );
+		if ( ! $value ) {
+			return false;
+		}
+
+		return sprintf( '<img src="%s">', $value );
+	}
+
+	/**
+	 * HTML/Shortcode Partial Render
+	 *
+	 * @param WP_Customize_Partial $partial
+	 *
+	 * @return string|false
+	 */
+	public function render_html( $partial ) {
+
+		return do_shortcode( self::get_partial_id( $partial ) );
+	}
+
+	/**
+	 * Debug Partial
+	 *
+	 * @param WP_Customize_Partial $partial
+	 */
+	public function render_debug( $partial ) {
+		var_dump( $partial );
 	}
 }
