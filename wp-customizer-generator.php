@@ -11,4 +11,8 @@ Text Domain: wpcg
 
 define( 'WPCG_PATH', __DIR__ );
 
+// Kirki dependency
+require_once WPCG_PATH . '/kirki/kirki.php';
+
+// Customizer
 require_once WPCG_PATH . '/WPCG_Customizer_Generator.php';
