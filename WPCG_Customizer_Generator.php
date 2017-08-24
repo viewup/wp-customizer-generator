@@ -362,7 +362,7 @@ class WPCG_Customizer_Generator {
 			'partial_refresh' => true
 		);
 
-		return $this->add( $id, self::parse_arguments( $defaults,
+		return $this->add_image_field( $id, self::parse_arguments( $defaults,
 			self::parse_indexed_arguments( $args, array( 'label', 'default', 'description', 'priority', 'help' ) )
 		) );
 	}
