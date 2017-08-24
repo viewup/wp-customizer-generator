@@ -460,7 +460,7 @@ class WPCG_Customizer_Generator {
 	 * @return array
 	 */
 	static function parse_indexed_arguments( $values = array(), $keys = array() ) {
-		return self::parse_indexed_arguments( self::array_argument( $values ), $keys );
+		return self::parse_indexed_values( self::array_argument( $values ), $keys );
 	}
 
 	/**
