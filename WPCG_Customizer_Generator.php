@@ -111,7 +111,7 @@ class WPCG_Customizer_Generator {
 
 		// default values
 		$defaults = array(
-			'title' => __( 'Theme' ),
+			'title' => $id,
 		);
 
 		// add new panel
@@ -131,7 +131,7 @@ class WPCG_Customizer_Generator {
 
 		// default values
 		$defaults = array(
-			'title' => __( 'Theme Settings' ),
+			'title' => $id,
 			'panel' => $this->current_panel
 		);
 
@@ -231,7 +231,7 @@ class WPCG_Customizer_Generator {
 
 		if ( true === $args['partial_refresh'] ) {
 			$args['partial_refresh'] = array(
-				'default' => array(
+				$id => array(
 					'selector'        => sprintf( $this->partial_selector_mask, $id ),
 					'render_callback' => $args['render_callback'] ? $args['render_callback'] : $this->get_render_callback( $args ),
 				),
@@ -540,7 +540,7 @@ class WPCG_Customizer_Generator {
 
 		$value = get_theme_mod( self::get_partial_id( $partial ) );
 		if ( ! $value ) {
-			return false;
+			return null;
 		}
 
 		return sprintf( '<img src="%s">', $value );
