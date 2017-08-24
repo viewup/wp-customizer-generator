@@ -219,7 +219,6 @@ class WPCG_Customizer_Generator {
 	public function add( $id, $args = array() ) {
 		$defaults = array(
 			'type'            => 'text',
-			'settings'        => $this->kirki_id,
 			'label'           => $id,
 			'section'         => $this->current_section,
 			'render_callback' => false,
@@ -241,7 +240,9 @@ class WPCG_Customizer_Generator {
 
 		unset( $args['render_callback'] );
 
-		Kirki::add_field( $id, $args );
+		$args['settings'] = $id;
+
+		Kirki::add_field( $this->kirki_id, $args );
 
 		$this->settings[ $id ] = $args;
 
