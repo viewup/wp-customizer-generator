@@ -127,7 +127,7 @@ class WPCG_Customizer_Generator {
 		return $this->execute( $callback );
 	}
 
-	public function add_section( $id = 'theme-settings', $args = array(), $callback ) {
+	public function add_section( $id = 'theme-settings', $args = array(), $callback = null ) {
 
 		// default values
 		$defaults = array(
