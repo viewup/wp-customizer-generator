@@ -2,7 +2,29 @@
 
 A Wordpress Customizer Generator that simplify the customizer usage
 
-## Example:
+## Installing
+
+You can install this as a plugin or as a include on your theme
+
+### As a Plugin
+
+ 1. [Install Kirki Plugin](https://br.wordpress.org/plugins/kirki/) and activate it.
+ 2. [Download](https://github.com/viewup/wp-customizer-generator/archive/master.zip) the Project ZIP.
+ 3. In WordPress > Plugins > Add New, Upload the Plugin Zip. Install and activate it.
+
+### As a Include in Theme
+
+
+ 1. Download the project:
+	 -  Clone the project using `git clone --recursive -j8 https://github.com/viewup/wp-customizer-generator.git`
+	 - Download the Project ZIP and download Kirki ZIP. unzip the project and unzip kirki on `/kirki` folder.
+ 2. Place the project in the desired theme folder (`/inc/customizer-generator`)
+ 3. Include the main PHP file:  `require_once __DIR__ . '/inc/customizer-generator/wp-customizer-generator.php';` on `functions.php` or in another PHP file
+
+
+## Examples
+
+Some usage usage example:
 
 ### PHP
 
