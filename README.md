@@ -43,12 +43,16 @@ $customizer
 ````html
 <!--The background Image and Color on the same element-->
 <section data-wp-setting="custom-text-background custom-image-background">
+
     <!--The Title Field-->
     <h1 data-wp-setting="custom-title"><? $customizer->the_setting( 'custom-title' ) ?></h1>
+
     <!--The Textarea Field and Text Color-->
     <p data-wp-setting="custom-text custom-text-color"><? $customizer->the_setting( 'custom-text' ) ?></p>
+
     <!--The Custom Logo-->
     <a href="/" data-wp-setting="custom-logo"><? $customizer->the_setting( 'custom-logo' ) ?></a>
+
     <!--The Custom Banner-->
     <figure data-wp-setting="custom-banner"><? $customizer->the_setting( 'custom-banner' ) ?></figure>
 </section>
