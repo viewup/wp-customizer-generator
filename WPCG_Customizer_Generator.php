@@ -293,6 +293,7 @@ class WPCG_Customizer_Generator {
 
 	public function add_color_text( $id, $args = array() ) {
 		$defaults = array(
+			'transport' => 'auto',
 			'output' => array(
 				array(
 					'element'  => sprintf( $this->partial_selector_mask, $id ),
@@ -309,6 +310,7 @@ class WPCG_Customizer_Generator {
 
 	public function add_image_background( $id, $args = array() ) {
 		$defaults = array(
+			'transport' => 'auto',
 			'output' => array(
 				array(
 					'element'  => sprintf( $this->partial_selector_mask, $id ),
@@ -324,6 +326,7 @@ class WPCG_Customizer_Generator {
 
 	public function add_color_background( $id, $args = array() ) {
 		$defaults = array(
+			'transport' => 'auto',
 			'output' => array(
 				array(
 					'element'  => sprintf( $this->partial_selector_mask, $id ),
