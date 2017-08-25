@@ -48,7 +48,7 @@ class WPCG_Customizer_Generator {
 	 *
 	 * @var string
 	 */
-	private $partial_selector_mask = '[data-wp-setting="%s"]';
+	private $partial_selector_mask = '[data-wp-setting*="%s"]';
 
 	/**
 	 * Current Panel ID
@@ -219,7 +219,6 @@ class WPCG_Customizer_Generator {
 	public function add( $id, $args = array() ) {
 		$defaults = array(
 			'type'            => 'text',
-			'label'           => $id,
 			'section'         => $this->current_section,
 			'render_callback' => false,
 			'partial_refresh' => array()
@@ -292,16 +291,7 @@ class WPCG_Customizer_Generator {
 	// Wrapped Fields
 
 	public function add_color_text( $id, $args = array() ) {
-		$defaults = array(
-			'transport' => 'auto',
-			'output' => array(
-				array(
-					'element'  => sprintf( $this->partial_selector_mask, $id ),
-					'property' => 'color',
-				)
-			),
-
-		);
+		$defaults = $this->get_output( $id, 'color', array() );
 
 		return $this->add_color_field( $id, self::parse_arguments( $defaults,
 			self::parse_indexed_arguments( $args, array( 'label', 'default', 'alpha', 'description', 'priority' ) )
@@ -309,15 +299,8 @@ class WPCG_Customizer_Generator {
 	}
 
 	public function add_image_background( $id, $args = array() ) {
-		$defaults = array(
-			'transport' => 'auto',
-			'output' => array(
-				array(
-					'element'  => sprintf( $this->partial_selector_mask, $id ),
-					'property' => 'background-image',
-				)
-			),
-		);
+
+		$defaults = $this->get_output( $id, 'background-image', array() );
 
 		return $this->add_image_field( $id, self::parse_arguments( $defaults,
 			self::parse_indexed_arguments( $args, array( 'label', 'default', 'description', 'priority', 'help' ) )
@@ -325,15 +308,7 @@ class WPCG_Customizer_Generator {
 	}
 
 	public function add_color_background( $id, $args = array() ) {
-		$defaults = array(
-			'transport' => 'auto',
-			'output' => array(
-				array(
-					'element'  => sprintf( $this->partial_selector_mask, $id ),
-					'property' => 'background-color',
-				)
-			),
-		);
+		$defaults = $this->get_output( $id, 'background-color', array() );
 
 		return $this->add_color_field( $id, self::parse_arguments( $defaults,
 			self::parse_indexed_arguments( $args, array( 'label', 'default', 'alpha', 'description', 'priority' ) )
@@ -361,6 +336,7 @@ class WPCG_Customizer_Generator {
 	}
 
 	public function add_image( $id, $args = array() ) {
+
 		$defaults = array(
 			'partial_refresh' => true
 		);
@@ -398,6 +374,53 @@ class WPCG_Customizer_Generator {
 		return '';
 	}
 
+	public function get_output( $id, $output = array(), $merge = false ) {
+		// if passed an array of outputs
+		if ( self::is_matrix( $output ) ) {
+			$fields = array();
+			foreach ( $output as $item ) {
+				$fields[] = $this->get_output( $id, $item );
+			}
+			if ( false === $merge ) {
+				return $fields;
+			}
+
+			return self::parse_arguments( array(
+				'transport' => 'auto',
+				'output'    => $fields
+			), $merge );
+		}
+
+		$defaults = array(
+			'element' => sprintf( $this->partial_selector_mask, $id ),
+			'force'   => false,
+			'suffix'  => '',
+		);
+
+		$output = self::parse_arguments( $defaults,
+			self::parse_indexed_arguments( $output, array( 'property', 'units', 'force', 'value_pattern' ) )
+		);
+		if ( $output['force'] ) {
+			$output['suffix'] .= ' !important';
+		}
+		unset( $output['force'] );
+
+		if ( false === $merge ) {
+			return $output;
+		}
+
+		return self::parse_arguments( array(
+			'transport' => 'auto',
+			'output'    => array( $output )
+		), $merge );
+
+
+	}
+
+	public function get_selector( $id ) {
+		return sprintf( $this->partial_selector_mask, $id );
+	}
+
 	private function execute( $function = null ) {
 		if ( is_callable( $function ) ) {
 			$function( $this );
@@ -422,6 +445,26 @@ class WPCG_Customizer_Generator {
 		}
 
 		return array_keys( $array ) === range( 0, count( $array ) - 1 );
+	}
+
+	/**
+	 * Detects if an variable is an array of arrays
+	 *
+	 * @param array $matrix
+	 *
+	 * @return bool
+	 */
+	static function is_matrix( $matrix = array() ) {
+		if ( ! self::is_indexed_array( $matrix ) ) {
+			return false;
+		}
+		foreach ( $matrix as $array ) {
+			if ( ! is_array( $array ) ) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/**
