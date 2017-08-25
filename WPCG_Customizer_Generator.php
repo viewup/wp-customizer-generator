@@ -46,9 +46,11 @@ class WPCG_Customizer_Generator {
 	 *
 	 * Data attribute is used by default, because don't affect CSS.
 	 *
+	 * This selector is used because multiple fields can happen on the same selector (may not work on IE8)
+	 *
 	 * @var string
 	 */
-	private $partial_selector_mask = '[data-wp-setting*="%s"]';
+	private $partial_selector_mask = '[data-wp-setting~="%s"]';
 
 	/**
 	 * Current Panel ID
@@ -105,6 +107,11 @@ class WPCG_Customizer_Generator {
 		$this->control_mask          = $settings['control_mask'];
 		$this->partial_selector_mask = $settings['partial_selector_mask'];
 
+		Kirki::add_config( $this->kirki_id, array(
+			'capability'  => 'edit_theme_options',
+			'option_type' => 'theme_mod',
+		) );
+
 	}
 
 	public function add_panel( $id = 'theme-panel', $args = array(), $callback = null ) {
@@ -114,11 +121,17 @@ class WPCG_Customizer_Generator {
 			'title' => $id,
 		);
 
-		// add new panel
-		Kirki::add_panel( $id, self::parse_arguments( $defaults,
+		$args = self::parse_arguments( $defaults,
 			// fix indexed arguments and non-array arguments
 			self::parse_indexed_arguments( $args, array( 'title', 'priority', 'description' ) )
-		) );
+		);
+
+		if ( $args['title'] === $id ) {
+			$id = self::sanitize( $id );
+		}
+
+		// add new panel
+		Kirki::add_panel( $id, $args );
 
 		// update current panel
 		$this->current_panel = $id;
@@ -135,10 +148,19 @@ class WPCG_Customizer_Generator {
 			'panel' => $this->current_panel
 		);
 
+		$args = self::parse_arguments( $defaults,
+			// fix indexed arguments and non-array arguments
+			self::parse_indexed_arguments( $args, array( 'title', 'priority', 'description' ) )
+		);
+
+		if ( $args['title'] === $id ) {
+			$id = self::sanitize( $id );
+		}
+
 		// add new panel
 		Kirki::add_section( $id, self::parse_arguments( $defaults,
 			// fix indexed arguments and non-array arguments
-			self::parse_indexed_arguments( $args, array( 'title', 'description', 'priority' ) )
+			self::parse_indexed_arguments( $args, array( 'title', 'priority', 'description' ) )
 		) );
 
 		// update current panel
@@ -215,7 +237,6 @@ class WPCG_Customizer_Generator {
 	}
 
 
-	// Base Fields
 	public function add( $id, $args = array() ) {
 		$defaults = array(
 			'type'            => 'text',
@@ -250,6 +271,34 @@ class WPCG_Customizer_Generator {
 		return $this;
 
 	}
+
+	public function get_setting( $id = '', $default = false ) {
+
+		if ( ! $id ) {
+			$id = $this->current_setting;
+		}
+		if ( false === $default && isset( $this->settings[ $id ] ) ) {
+			$default = $this->settings[ $id ]['default'];
+		}
+
+		$this->set_current_field( $id );
+
+		return get_theme_mod( $id, $default );
+
+	}
+
+	public function the_setting( $id = '', $default = false ) {
+		if ( isset( $this->settings[ $id ], $this->settings[ $id ]['partial_refresh'][ $id ] ) ) {
+			echo call_user_func( $this->settings[ $id ]['partial_refresh'][ $id ]['render_callback'], $id );
+
+			return;
+		}
+
+		echo $this->get_setting( $id = '', $default = false );
+	}
+
+
+	// Base Fields
 
 	public function add_text_field( $id, $args = array() ) {
 		$defaults = array(
@@ -347,6 +396,13 @@ class WPCG_Customizer_Generator {
 	}
 
 	// internal and logic functions
+	public function set_current_field( $id ) {
+		$this->current_setting = $id;
+	}
+
+	public function get_current_field() {
+		return $this->current_setting;
+	}
 
 	// Helper Functions
 
@@ -368,10 +424,9 @@ class WPCG_Customizer_Generator {
 				return array( $this, 'render_html' );
 			case 'text':
 			case 'echo':
+			default:
 				return array( $this, 'render_text' );
 		}
-
-		return '';
 	}
 
 	public function get_output( $id, $output = array(), $merge = false ) {
@@ -561,6 +616,17 @@ class WPCG_Customizer_Generator {
 		return $partial->primary_setting;
 	}
 
+	/**
+	 * Sanitize strings and fields ids
+	 *
+	 * @param string $string
+	 *
+	 * @return string
+	 */
+	static function sanitize( $string = '' ) {
+		return sanitize_title( $string );
+	}
+
 	// Render Functions
 
 	/**
@@ -572,7 +638,7 @@ class WPCG_Customizer_Generator {
 	 */
 	public function render_text( $partial ) {
 
-		return get_theme_mod( self::get_partial_id( $partial ) );
+		return nl2br( get_theme_mod( self::get_partial_id( $partial ) ) );
 	}
 
 	/**
