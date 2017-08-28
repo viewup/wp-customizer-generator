@@ -32,7 +32,7 @@ Some usage usage example:
 <?php
 
 // Base include
-require_once __DIR__ . '/customizer-generator/wp-customizer-generator.php';
+include_once __DIR__ . '/customizer-generator/wp-customizer-generator.php';
 
 // creating the instance
 $customizer = new WPCG_Customizer_Generator();

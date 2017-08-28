@@ -32,6 +32,10 @@ class WPCG_Customizer_Generator {
 	 */
 	public $wp_customize = null;
 
+	/**
+	 * The Default Kirki ID
+	 * @var string
+	 */
 	public $kirki_id = 'theme-settings';
 
 	/**
@@ -51,6 +55,8 @@ class WPCG_Customizer_Generator {
 	 * @var string
 	 */
 	private $partial_selector_mask = '[data-wp-setting~="%s"]';
+
+	private $setting_attribute_mask = 'data-wp-setting="%s"';
 
 	/**
 	 * Current Panel ID
@@ -86,27 +92,32 @@ class WPCG_Customizer_Generator {
 	 */
 	private $defaults = array();
 
+	/**
+	 * WPCG_Customizer_Generator constructor.
+	 *
+	 * @param WP_Customize_Manager|null $customize
+	 * @param array $args
+	 */
 	public function __construct( $customize = null, $args = array() ) {
-		global $wp_customize;
-		// use global customizer if not set
-		if ( ! $customize ) {
-			$customize = $wp_customize;
-		}
-
 		// default settings
 		$defaults = array(
 			'control_mask'          => $this->control_mask,
 			'partial_selector_mask' => $this->partial_selector_mask,
 		);
 
-		$settings = array_merge( $defaults, $args );
-
+		$settings = self::parse_arguments( $defaults, $args );
 
 		// update settings
-		$this->wp_customize          = $wp_customize;
+		$this->set_wp_customize( $customize );
 		$this->control_mask          = $settings['control_mask'];
 		$this->partial_selector_mask = $settings['partial_selector_mask'];
 
+		// Will get a real WP_Customize_Manager if not informed
+		if ( ! $customize ) {
+			add_action( 'customize_register', array( $this, 'set_wp_customize' ) );
+		}
+
+		// Add Kirki default config
 		Kirki::add_config( $this->kirki_id, array(
 			'capability'  => 'edit_theme_options',
 			'option_type' => 'theme_mod',
@@ -114,6 +125,15 @@ class WPCG_Customizer_Generator {
 
 	}
 
+	/**
+	 * Add new Theme Panel
+	 *
+	 * @param string $id ID or Panel Label
+	 * @param array $args
+	 * @param callable|null $callback
+	 *
+	 * @return WPCG_Customizer_Generator
+	 */
 	public function add_panel( $id = 'theme-panel', $args = array(), $callback = null ) {
 
 		// default values
@@ -140,6 +160,15 @@ class WPCG_Customizer_Generator {
 		return $this->execute( $callback );
 	}
 
+	/**
+	 * Add Theme Section
+	 *
+	 * @param string $id ID or section Label
+	 * @param array $args
+	 * @param callable|null $callback
+	 *
+	 * @return WPCG_Customizer_Generator
+	 */
 	public function add_section( $id = 'theme-settings', $args = array(), $callback = null ) {
 
 		// default values
@@ -170,79 +199,72 @@ class WPCG_Customizer_Generator {
 		return $this->execute( $callback );
 	}
 
-	public function add_setting( $id, $args = array() ) {
+	/**
+	 * Get the setting
+	 *
+	 * @param string $id
+	 * @param bool $default Setting Default(if not set, uses the defined default)
+	 *
+	 * @return string
+	 */
+	public function get_setting( $id = null, $default = false ) {
+		$id = $this->the_current_setting( $id );
 
-		$this->wp_customize->add_setting( $id, $args );
+		if ( false === $default && isset( $this->settings[ $id ] ) ) {
+			$default = $this->settings[ $id ]['default'];
+		}
 
-		$this->current_setting = $id;
+		$this->set_current_field( $id );
 
-		return $this;
+		return get_theme_mod( $id, $default );
+
 	}
 
-	public function add_control( $id = true, $args = array() ) {
-
-		// when true, the current setting will be used
-		if ( $id === true ) {
-			$id = $this->current_setting;
+	/**
+	 * Output the setting using the defined function
+	 *
+	 * @param string $id
+	 * @param bool $default Setting Default(if not set, uses the defined default)
+	 */
+	public function the_setting( $id = null, $default = false ) {
+		$id     = $this->the_current_setting( $id );
+		$render = array( $this, 'render_text' );
+		if ( isset( $this->settings[ $id ], $this->settings[ $id ]['partial_refresh'][ $id ] ) ) {
+			$render = $this->settings[ $id ]['partial_refresh'][ $id ]['render_callback'];
 		}
 
-		// if an custom controller
-		if ( $id instanceof WP_Customize_Control ) {
-			$this->wp_customize->add_control( $id );
-
-			return $this;
-		}
-
-		$defaults = array(
-			'title'    => $id,
-			'settings' => '',
-			'section'  => $this->current_section,
-			'type'     => 'text'
-		);
-
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, array( 'title', 'description', 'priority', 'settings' ) )
-		);
-
-		// if setting not passed, is presumed that the $id is the setting. The mask is used.
-		if ( ! $args['settings'] ) {
-			$args['settings'] = $id;
-			$id               = sprintf( $this->control_mask, $id );
-		}
-
-		$this->wp_customize->add_control( $id, $args );
-
-		return $this;
+		echo call_user_func( $render, $id );
 	}
 
-	public function add_partial( $id = false, $args = array() ) {
-		if ( ! $this->has_partial() ) {
-			return $this;
-		}
+	/**
+	 * return settings attributes
+	 *
+	 * @param string|array|null $setting The setting ID, or array of settings IDs, or NULL if the current Setting
+	 *
+	 * @return string
+	 */
+	public function get_setting_attributes( $setting = null ) {
+		$setting = self::array_argument( $this->the_current_setting( $setting ) );
 
-		$defaults = array(
-			'render_callback' => 'text',
-			'selector'        => sprintf( $this->partial_selector_mask, $id )
-		);
-
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, array( 'render_callback', 'selector' ) )
-		);
-
-		$render = $this->get_render_callback( $args['render_callback'] );
-
-		$args['render_callback'] = $render ? $render : $args['render_callback'];
-
-		return $this;
+		return sprintf( $this->setting_attribute_mask, implode( ' ', $setting ) );
 	}
 
+	/**
+	 * Output settings attributes
+	 *
+	 * @param string|array|null $setting The setting ID, or array of settings IDs, or NULL if the current Setting
+	 */
+	public function setting_attributes( $setting = null ) {
+		echo $this->get_setting_attributes( $setting );
+	}
 
 	public function add( $id, $args = array() ) {
 		$defaults = array(
 			'type'            => 'text',
 			'section'         => $this->current_section,
 			'render_callback' => false,
-			'partial_refresh' => array()
+			'partial_refresh' => array(),
+			'js_vars'         => array(),
 		);
 
 		$args = self::parse_arguments( $defaults,
@@ -250,6 +272,7 @@ class WPCG_Customizer_Generator {
 		);
 
 		if ( true === $args['partial_refresh'] ) {
+//			$args['transport']       = 'postMessage';
 			$args['partial_refresh'] = array(
 				$id => array(
 					'selector'        => sprintf( $this->partial_selector_mask, $id ),
@@ -262,41 +285,15 @@ class WPCG_Customizer_Generator {
 
 		$args['settings'] = $id;
 
-		Kirki::add_field( $this->kirki_id, $args );
-
 		$this->settings[ $id ] = $args;
 
-		$this->current_setting = $id;
+		$this->the_current_setting( $id );
+
+		Kirki::add_field( $this->kirki_id, $args );
 
 		return $this;
 
 	}
-
-	public function get_setting( $id = '', $default = false ) {
-
-		if ( ! $id ) {
-			$id = $this->current_setting;
-		}
-		if ( false === $default && isset( $this->settings[ $id ] ) ) {
-			$default = $this->settings[ $id ]['default'];
-		}
-
-		$this->set_current_field( $id );
-
-		return get_theme_mod( $id, $default );
-
-	}
-
-	public function the_setting( $id = '', $default = false ) {
-		if ( isset( $this->settings[ $id ], $this->settings[ $id ]['partial_refresh'][ $id ] ) ) {
-			echo call_user_func( $this->settings[ $id ]['partial_refresh'][ $id ]['render_callback'], $id );
-
-			return;
-		}
-
-		echo $this->get_setting( $id = '', $default = false );
-	}
-
 
 	// Base Fields
 
@@ -395,7 +392,117 @@ class WPCG_Customizer_Generator {
 		) );
 	}
 
-	// internal and logic functions
+	// Default Customizer Compatibility
+
+	/**
+	 * Add Default Customizer Setting
+	 *
+	 * @param string $id
+	 * @param array $args
+	 *
+	 * @return $this
+	 */
+	public function add_setting( $id, $args = array() ) {
+
+		$this->wp_customize->add_setting( $id, $args );
+
+		$this->current_setting = $id;
+
+		return $this;
+	}
+
+	/**
+	 * Add Default Customizer Control
+	 *
+	 * @param string|bool $id
+	 * @param array $args
+	 *
+	 * @return $this
+	 */
+	public function add_control( $id = true, $args = array() ) {
+
+		// when true, the current setting will be used
+		if ( $id === true ) {
+			$id = $this->current_setting;
+		}
+
+		// if an custom controller
+		if ( $id instanceof WP_Customize_Control ) {
+			$this->wp_customize->add_control( $id );
+
+			return $this;
+		}
+
+		$defaults = array(
+			'title'    => $id,
+			'settings' => '',
+			'section'  => $this->current_section,
+			'type'     => 'text'
+		);
+
+		$args = self::parse_arguments( $defaults,
+			self::parse_indexed_arguments( $args, array( 'title', 'description', 'priority', 'settings' ) )
+		);
+
+		// if setting not passed, is presumed that the $id is the setting. The mask is used.
+		if ( ! $args['settings'] ) {
+			$args['settings'] = $id;
+			$id               = sprintf( $this->control_mask, $id );
+		}
+
+		$this->wp_customize->add_control( $id, $args );
+
+		return $this;
+	}
+
+	/**
+	 * Add Default Customizer Partial
+	 *
+	 * @param bool $id
+	 * @param array $args
+	 *
+	 * @return $this
+	 */
+	public function add_partial( $id = false, $args = array() ) {
+		if ( ! $this->has_partial() ) {
+			return $this;
+		}
+
+		$defaults = array(
+			'render_callback' => 'text',
+			'selector'        => sprintf( $this->partial_selector_mask, $id )
+		);
+
+		$args = self::parse_arguments( $defaults,
+			self::parse_indexed_arguments( $args, array( 'render_callback', 'selector' ) )
+		);
+
+		$render = $this->get_render_callback( $args['render_callback'] );
+
+		$args['render_callback'] = $render ? $render : $args['render_callback'];
+
+		return $this;
+	}
+
+	// Internal and logic functions
+
+	public function the_current_setting( $setting = null ) {
+		if ( $setting ) {
+			$this->current_setting = $setting;
+		}
+
+		return $this->current_setting;
+
+	}
+
+	public function set_wp_customize( $customize = null ) {
+		if ( ! $customize ) {
+			global $wp_customize;
+			$customize = $wp_customize ? $wp_customize : $this->wp_customize;
+		}
+		$this->wp_customize = $customize;
+	}
+
 	public function set_current_field( $id ) {
 		$this->current_setting = $id;
 	}
@@ -476,9 +583,14 @@ class WPCG_Customizer_Generator {
 		return sprintf( $this->partial_selector_mask, $id );
 	}
 
+	/**
+	 * @param callable|null $function
+	 *
+	 * @return $this
+	 */
 	private function execute( $function = null ) {
 		if ( is_callable( $function ) ) {
-			$function( $this );
+			call_user_func( $function, $this );
 		}
 
 		return $this;
@@ -627,6 +739,10 @@ class WPCG_Customizer_Generator {
 		return sanitize_title( $string );
 	}
 
+	public function get_partial_setting( $partial ) {
+		return $this->get_setting( self::get_partial_id( $partial ) );
+	}
+
 	// Render Functions
 
 	/**
@@ -637,8 +753,7 @@ class WPCG_Customizer_Generator {
 	 * @return string|false
 	 */
 	public function render_text( $partial ) {
-
-		return nl2br( get_theme_mod( self::get_partial_id( $partial ) ) );
+		return nl2br( $this->get_partial_setting( $partial ) );
 	}
 
 	/**
@@ -650,7 +765,7 @@ class WPCG_Customizer_Generator {
 	 */
 	public function render_image( $partial ) {
 
-		$value = get_theme_mod( self::get_partial_id( $partial ) );
+		$value = $this->get_partial_setting( $partial );
 		if ( ! $value ) {
 			return null;
 		}
@@ -666,8 +781,7 @@ class WPCG_Customizer_Generator {
 	 * @return string|false
 	 */
 	public function render_html( $partial ) {
-
-		return do_shortcode( self::get_partial_id( $partial ) );
+		return do_shortcode( $this->get_partial_setting( $partial ) );
 	}
 
 	/**
