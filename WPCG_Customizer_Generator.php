@@ -263,6 +263,7 @@ class WPCG_Customizer_Generator {
 			'type'            => 'text',
 			'section'         => $this->current_section,
 			'render_callback' => false,
+			'shortcut'        => false,
 			'partial_refresh' => array(),
 			'js_vars'         => array(),
 		);
@@ -272,20 +273,25 @@ class WPCG_Customizer_Generator {
 		);
 
 		if ( true === $args['partial_refresh'] ) {
+			$args['partial_refresh'] = array();
 //			$args['transport']       = 'postMessage';
-			$args['partial_refresh'] = array(
-				$id => array(
-					'selector'        => sprintf( $this->partial_selector_mask, $id ),
-					'render_callback' => $args['render_callback'] ? $args['render_callback'] : $this->get_render_callback( $args ),
-				),
+			$args['partial_refresh'][ $id ] = array(
+				'selector'        => sprintf( $this->partial_selector_mask, $id ),
+				'render_callback' => $args['render_callback'] ? $args['render_callback'] : $this->get_render_callback( $args ),
+			);
+		} else if ( $args['shortcut'] ) {
+			// add a fake partial, that return false. this way, will work as a edit shortcut only.
+			$args['partial_refresh'][ sprintf( "%s-shortcut", $id ) ] = array(
+				'selector'        => is_string( $args['shortcut'] ) ? $args['shortcut'] : sprintf( $this->partial_selector_mask, $id ),
+				'render_callback' => '__return_false'
 			);
 		}
-
-		unset( $args['render_callback'] );
 
 		$args['settings'] = $id;
 
 		$this->settings[ $id ] = $args;
+
+		unset( $args['render_callback'], $args['shortcut'] );
 
 		$this->the_current_setting( $id );
 
