@@ -84,3 +84,35 @@ On the example, some fields are added and is showed how use them.
 
 Sections and Panels automatically Define Contexts.
 When you add one, all fields and sections below it will be automatically wrapped.
+
+## Support
+
+Currently, all Kirki and WP Fields are supported, but not optimized. The fields below are optimized for easy insertion:
+
+ - [x] image (background, HTML - need more options)
+ - [x] color (background, text and custom)
+ - [x] text (HTML)
+ - [x] textarea (HTML)
+ - [ ] checkbox
+ - [ ] code
+ - [ ] color-palette
+ - [ ] custom
+ - [ ] dashicons
+ - [ ] dimension
+ - [ ] dropdown-pages
+ - [ ] multicheck
+ - [ ] multicolor
+ - [ ] number
+ - [ ] palette
+ - [ ] radio-buttonset
+ - [ ] radio-image
+ - [ ] radio
+ - [ ] repeater
+ - [ ] select
+ - [ ] slider
+ - [ ] sortable
+ - [ ] spacing
+ - [ ] switch
+ - [ ] toggle
+ - [ ] typography
+ - [ ] upload
