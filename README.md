@@ -89,30 +89,36 @@ When you add one, all fields and sections below it will be automatically wrapped
 
 Currently, all Kirki and WP Fields are supported, but not optimized. The fields below are optimized for easy insertion:
 
- - [x] image (background, HTML - need more options)
- - [x] color (background, text and custom)
- - [x] text (HTML)
- - [x] textarea (HTML)
- - [ ] checkbox
- - [ ] code
- - [ ] color-palette
- - [ ] custom
- - [ ] dashicons
- - [ ] dimension
- - [ ] dropdown-pages
- - [ ] multicheck
- - [ ] multicolor
- - [ ] number
- - [ ] palette
- - [ ] radio-buttonset
- - [ ] radio-image
- - [ ] radio
- - [ ] repeater
- - [ ] select
- - [ ] slider
- - [ ] sortable
- - [ ] spacing
- - [ ] switch
- - [ ] toggle
- - [ ] typography
- - [ ] upload
+ - [x] image (field, background, HTML - need more options)
+ - [x] color (field, background, text and custom)
+ - [x] text (field, HTML)
+ - [x] textarea (field, HTML)
+ - [x] color-palette (field)
+ - [x] multicheck (field)
+ - [x] palette (field)
+ - [x] radio-buttonset (field)
+ - [x] radio-image (field)
+ - [x] radio (field)
+ - [x] select (field)
+ - [x] sortable (field)
+ - [x] checkbox (field)
+ - [x] switch (field)
+ - [x] toggle (field)
+ - [x] code (field)
+ - [x] number (field)
+ - [x] dashicons (field)
+ - [x] dimension (field) - Can be Improved
+ - [x] dropdown-pages (field)
+ - [x] multicolor (field)
+ - [x] slider (field)
+ - [x] spacing (field) - Can be Improved
+ - [x] typography (field) - Can be Improved
+ - [x] upload (field)
+ - [x] custom
+ - [ ] repeater (see below)
+
+(field): Field Register
+
+(HTML): Field Register and render
+
+Is planned a good support for Repeater, making the field and repeater field insertion the same (signature).
