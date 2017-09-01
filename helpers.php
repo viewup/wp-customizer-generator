@@ -1,17 +1,8 @@
 <?php
 /**
- * Initialize a global instance and action
+ * Helper functions for designer
  */
 
-function wpcg_init() {
-	global $wpcg_customize;
-
-	$wpcg_customize = new WPCG_Customizer_Generator();
-
-	do_action( 'wpcg_customize_register', $wpcg_customize );
-}
-
-add_action( 'init', 'wpcg_init' );
 
 /**
  * @return WPCG_Customizer_Generator

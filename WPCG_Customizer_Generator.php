@@ -78,6 +78,16 @@ class WPCG_Customizer_Generator {
 	 * @var string
 	 */
 	private $current_setting = '';
+
+	/**
+	 * The current editing type. Can be setting, panel or section.
+	 *
+	 * Used to modify the current element
+	 *
+	 * @var string
+	 */
+	private $current_type = 'setting';
+
 	/**
 	 * Registered settings (by the class) indexed by id
 	 *
@@ -85,7 +95,19 @@ class WPCG_Customizer_Generator {
 	 */
 	private $settings = array();
 
-	private $random_message_counter = 0;
+	/**
+	 * Registered Divisions (panels and sections)
+	 * @var array
+	 */
+	private $divisions = array( 'panels' => array(), 'sections' => array() );
+
+	private $random_counter = 0;
+
+	/**
+	 * Array of saved fields
+	 * @var array
+	 */
+	private $saved = array( 'panels' => array(), 'sections' => array(), 'fields' => array() );
 
 	/**
 	 * Fields and Methods defaults. Updated on set_defaults
@@ -139,9 +161,7 @@ class WPCG_Customizer_Generator {
 	function add_panel( $id = 'theme-panel', $args = array(), $callback = null ) {
 
 		// default values
-		$defaults = array(
-			'title' => $id,
-		);
+		$defaults = array( 'title' => $id );
 
 		$args = self::parse_arguments( $defaults,
 			// fix indexed arguments and non-array arguments
@@ -152,11 +172,14 @@ class WPCG_Customizer_Generator {
 			$id = self::sanitize( $id );
 		}
 
-		// add new panel
-		Kirki::add_panel( $id, $args );
+		// add new panel to save
+		$this->divisions['panels'][ $id ] = $args;
 
 		// update current panel
 		$this->current_panel = $id;
+
+		// Update Current editing type
+		$this->current_type = 'panel';
 
 		// execute callback
 		return $this->execute( $callback );
@@ -188,18 +211,523 @@ class WPCG_Customizer_Generator {
 			$id = self::sanitize( $id );
 		}
 
-		// add new panel
-		Kirki::add_section( $id, self::parse_arguments( $defaults,
-			// fix indexed arguments and non-array arguments
-			self::parse_indexed_arguments( $args, array( 'title', 'priority', 'description' ) )
-		) );
+		// add new section to save
+		$this->divisions['sections'][ $id ] = $args;
 
 		// update current panel
 		$this->current_section = $id;
 
+		// Update Current editing type
+		$this->current_type = 'section';
+
 		// execute callback
 		return $this->execute( $callback );
 	}
+
+	/**
+	 * Add custom message on the current/selected section
+	 *
+	 * @param string|array $args Message or settings array
+	 * @param null $id Id of message
+	 *
+	 * @return WPCG_Customizer_Generator
+	 */
+	function add_message( $args = array(), $id = null ) {
+		$default = array( 'type' => 'custom' );
+
+		$args = self::parse_arguments( $default,
+			self::parse_indexed_arguments( $args, array( 'default', 'label', 'priority', 'description' ) )
+		);
+
+		$id = $this->get_random_message_id( $id );
+
+		return $this->add( $id, $args );
+	}
+
+	function add( $id, $args = array() ) {
+		$defaults = array(
+			'type'            => 'text',
+			'section'         => $this->current_section,
+			'render'          => false,
+			'shortcut'        => false,
+			'partial'         => array(),
+			'partial_refresh' => array(),
+			'js_vars'         => array(),
+			'output'          => array(),
+			'active_callback' => array(),
+		);
+
+		$args = self::parse_arguments( $defaults,
+			self::parse_indexed_arguments( $args, array( 'type', 'label', 'default', 'description' ) )
+		);
+
+		if ( $args['partial'] || $args['render'] ) {
+			$args['partial_refresh'][ $id ] = array(
+				'selector'        => sprintf( $this->partial_selector_mask, $id ),
+				'render_callback' => $this->get_render_callback( $args ),
+			);
+		} else if ( $args['shortcut'] ) {
+			// add a fake partial, that return false. this way, will work as a edit shortcut only.
+			$args['partial_refresh'][ sprintf( "%s-shortcut", $id ) ] = array(
+				'selector'        => is_string( $args['shortcut'] ) ? $args['shortcut'] : sprintf( $this->partial_selector_mask, $id ),
+				'render_callback' => '__return_false'
+			);
+		}
+
+		$args['settings'] = $id;
+
+		// remove unecessary fields
+		unset( $args['render_callback'], $args['shortcut'], $args['partial'], $args['render'] );
+
+		$this->the_current_setting( $id );
+
+		// Update Current editing type
+		$this->current_type = 'setting';
+
+		// Add field to save
+		$this->settings[ $id ] = $args;
+
+		return $this;
+
+	}
+
+	function set_argument( $name, $value, $id = null ) {
+		$id = $this->the_current_setting( $id );
+
+		// field not found
+		if ( ! isset( $this->settings[ $id ] ) ) {
+			return $this;
+		}
+
+		$this->settings[ $id ][ $name ] = $value;
+
+		return $this;
+	}
+
+	function push_argument( $name, $value, $id = null, $key = null ) {
+		$id = $this->the_current_setting( $id );
+
+		// field not found
+		if ( ! isset( $this->settings[ $id ] ) ) {
+			return $this;
+		}
+		if ( null === $key ) {
+			$this->settings[ $id ][ $name ][] = $value;
+		} else {
+			$this->settings[ $id ][ $name ][ $key ] = $value;
+		}
+
+		return $this;
+	}
+
+	function capability( $value = 'edit_theme_options', $id = null ) {
+		return $this->set_argument( 'capability', $value, $id );
+	}
+
+	function priority( $value = 10, $id = null ) {
+		return $this->set_argument( 'priority', $value, $id );
+	}
+
+	function condition( $setting = array(), $id = null ) {
+		$defaults = array(
+			'setting'  => '',
+			'operator' => '!=',
+			'value'    => null,
+		);
+
+		$setting = self::parse_arguments( $defaults,
+			self::parse_indexed_arguments( $setting, array_keys( $defaults ) ) );
+
+		return $this->push_argument( 'active_callback', $setting, $id );
+
+	}
+
+	function set_choices( $value = array(), $id = null ) {
+		return $this->set_argument( 'choices', $value, $id );
+	}
+
+	function add_choice( $name, $value = null, $id = null ) {
+		$value = ( null === $value ) ? $name : $value;
+
+		return $this->push_argument( 'choices', $value, $id, $name );
+	}
+
+	function set_default( $value, $id = null ) {
+		return $this->set_argument( 'default', $value, $id );
+	}
+
+	function label( $value, $id = null ) {
+		return $this->set_argument( 'label', $value, $id );
+	}
+
+	function description( $value, $id = null ) {
+		return $this->set_argument( 'description', $value, $id );
+	}
+
+	function tooltip( $value, $id = null ) {
+		return $this->set_argument( 'tooltip', $value, $id );
+	}
+
+	function multiple( $value = 1, $id = null ) {
+		return $this->set_argument( 'multiple', $value, $id );
+	}
+
+	function output( $args = array(), $id = null ) {
+		$id = $this->the_current_setting( $id );
+
+		$defaults = array(
+			'property' => 'color',
+			'units'    => '',
+			'element'  => $this->get_selector( $id )
+		);
+
+		$args = self::parse_arguments( $defaults, self::parse_indexed_arguments( $args, array_keys( $defaults ) ) );
+
+		return $this->push_argument( 'output', $args );
+	}
+
+	function sanitize_callback( $value = 1, $id = null ) {
+		return $this->set_argument( 'sanitize_callback', $value, $id );
+	}
+
+	function partial_refresh( $args = array(), $key = null, $id = null ) {
+		$id  = $this->the_current_setting( $id );
+		$key = $this->get_random_key( 'partial-%s', $key );
+
+		$defaults = array(
+			'render_callback' => '',
+			'selector'        => $this->get_selector( $id )
+		);
+
+		$args = self::parse_arguments( $defaults, self::parse_indexed_arguments( $args, array_keys( $defaults ) ) );
+
+		return $this->push_argument( 'js_vars', $args, $id, $key );
+	}
+
+	function js_vars( $args = array(), $id = null ) {
+		$id       = $this->the_current_setting( $id );
+		$defaults = array(
+			'function' => 'html',
+			'property' => '',
+			'element'  => $this->get_selector( $id )
+		);
+		$args     = self::parse_arguments( $defaults, self::parse_indexed_arguments( $args, array_keys( $defaults ) ) );
+
+		return $this->push_argument( 'js_vars', $args, $id );
+	}
+
+	/**
+	 * Save all fields
+	 *
+	 * need to be done after insertion. If the hook is used, is automatically done.
+	 *
+	 * @return $this
+	 */
+	function save() {
+		$this->save_panels();
+		$this->save_sections();
+		$this->save_fields();
+
+		return $this;
+	}
+
+	// Base Fields
+	private function add_field( $id, $args = array(), $defaults = array(), $shortcut = array() ) {
+		$shortcut = $shortcut ? $shortcut : array( 'label', 'default', 'description', 'priority', 'help' );
+		$defaults = self::parse_arguments( array(
+			'type' => 'text',
+		), self::parse_indexed_arguments( $defaults, array( 'type', 'partial_refresh' ) ) );
+
+		$args = self::parse_arguments( $defaults,
+			self::parse_indexed_arguments( $args, $shortcut )
+		);
+
+		return $this->add( $id, $args );
+	}
+
+	// Text Fields
+	function add_text( $id, $args = array() ) {
+		return $this->add_field( $id, $args, 'text' );
+	}
+
+	function add_textarea( $id, $args = array() ) {
+		return $this->add_field( $id, $args, 'textarea' );
+	}
+
+	function add_code( $id, $args = array() ) {
+		$defaults = array(
+			'type'     => 'code',
+			'choices'  => array(),
+			'language' => 'css',
+			'theme'    => 'elegant',
+			'height'   => null,
+		);
+
+		$args = self::parse_arguments( $defaults,
+			self::parse_indexed_arguments( $args, array( 'label', 'default', 'language', 'description', 'priority' ) )
+		);
+
+		$args['choices'] = self::parse_arguments(
+			self::extract_values( array( 'language', 'theme', 'height' ), $args ), $args['choices'] );
+
+		unset( $args['language'], $args['theme'], $args['height'] );
+
+		return $this->add( $id, $args );
+	}
+
+	function add_number( $id, $args = array() ) {
+		$defaults = array(
+			'type'    => 'number',
+			'choices' => array(),
+			'min'     => - 999999999,
+			'max'     => 999999999,
+			'step'    => 1,
+		);
+
+		$shortcut = array( 'label', 'default', 'min', 'max', 'step', 'description', 'priority' );
+
+		$args = self::parse_arguments( $defaults,
+			self::parse_indexed_arguments( $args, $shortcut )
+		);
+
+		$args['choices'] = self::parse_arguments(
+			self::extract_values( array( 'min', 'max', 'step' ), $args ), $args['choices'] );
+
+		unset( $args['min'], $args['max'], $args['step'] );
+
+		return $this->add( $id, $args );
+	}
+
+	function add_dimension( $id, $args = array() ) {
+		return $this->add_field( $id, $args, 'dimension' );
+	}
+
+	// Choices Fields
+	private function add_choices_field( $id, $args = array(), $defaults = array(), $shortcut = array() ) {
+		$shortcut = $shortcut ? $shortcut : array( 'choices', 'label', 'default', 'description', 'priority', 'help' );
+		$defaults = self::parse_arguments( array(
+			'type'    => 'select',
+			'choices' => array()
+		), self::parse_indexed_arguments( $defaults, array( 'type', 'multiple' ) ) );
+
+		$args = self::parse_arguments( $defaults,
+			self::parse_indexed_arguments( $args, $shortcut )
+		);
+
+		return $this->add( $id, $args );
+	}
+
+	function add_select( $id, $args = array() ) {
+		return $this->add_choices_field( $id, $args, array( 'select', 1 ) );
+	}
+
+	function add_radio( $id, $args = array() ) {
+		return $this->add_choices_field( $id, $args, 'radio' );
+	}
+
+	function add_multicheck( $id, $args = array() ) {
+		return $this->add_choices_field( $id, $args, 'multicheck' );
+	}
+
+	function add_radio_image( $id, $args = array() ) {
+		return $this->add_choices_field( $id, $args, 'radio-image' );
+	}
+
+	function add_radio_buttonset( $id, $args = array() ) {
+		return $this->add_choices_field( $id, $args, 'radio-buttonset' );
+	}
+
+	function add_palette( $id, $args = array() ) {
+		return $this->add_choices_field( $id, $args, 'palette' );
+	}
+
+	function add_color_palette( $id, $args = array() ) {
+		return $this->add_choices_field( $id, $args, 'color-palette' );
+	}
+
+	function add_sortable( $id, $args = array() ) {
+		return $this->add_choices_field( $id, $args, 'sortable' );
+	}
+
+	// Boolean Fields
+	function add_checkbox( $id, $args = array() ) {
+		return $this->add_field( $id, $args, 'checkbox' );
+	}
+
+	function add_toggle( $id, $args = array() ) {
+		return $this->add_field( $id, $args, 'toggle' );
+	}
+
+	function add_switch( $id, $args = array() ) {
+		$defaults = array(
+			'type'    => 'switch',
+			'choices' => array(),
+			'on'      => __( 'On' ),
+			'off'     => __( 'Off' ),
+		);
+
+		$args = self::parse_arguments( $defaults,
+			self::parse_indexed_arguments( $args, array( 'label', 'default', 'on', 'off', 'description', 'priority' ) )
+		);
+
+		$args['choices'] = self::parse_arguments(
+			self::extract_values( array( 'on', 'off' ), $args ), $args['choices'] );
+
+		unset( $args['on'], $args['off'] );
+
+		return $this->add( $id, $args );
+	}
+
+	// Other Fields
+
+	function add_image( $id, $args = array() ) {
+		return $this->add_field( $id, $args, 'image' );
+	}
+
+	function add_color( $id, $args = array() ) {
+		$defaults = array(
+			'type'    => 'color',
+			'choices' => array(),
+			'alpha'   => false
+		);
+
+		$args = self::parse_arguments( $defaults,
+			self::parse_indexed_arguments( $args, array( 'label', 'default', 'alpha', 'description', 'priority' ) )
+		);
+
+		$args['choices'] = self::parse_arguments( array( 'alpha' => $args['alpha'] ), $args['choices'] );
+
+		unset( $args['alpha'] );
+
+		return $this->add( $id, $args );
+	}
+
+	function add_dashicons( $id, $args = array() ) {
+		return $this->add_field( $id, $args, 'dashicons' );
+	}
+
+	function add_upload( $id, $args = array() ) {
+		return $this->add_field( $id, $args, 'upload' );
+	}
+
+	function add_dropdown_pages( $id, $args = array() ) {
+		return $this->add_field( $id, $args, 'dropdown-pages' );
+	}
+
+	function add_slider( $id, $args = array() ) {
+		$defaults = array(
+			'type'    => 'slider',
+			'choices' => array(),
+			'min'     => - 999999999,
+			'max'     => 999999999,
+			'step'    => 1,
+		);
+
+		$shortcut = array( 'label', 'default', 'min', 'max', 'step', 'description', 'priority' );
+
+		$args = self::parse_arguments( $defaults,
+			self::parse_indexed_arguments( $args, $shortcut )
+		);
+
+		return $this->add_number_field( $id, $args );
+	}
+
+	function add_spacing( $id, $args = array() ) {
+		return $this->add_field( $id, $args, 'spacing' );
+	}
+
+	function add_typography( $id, $args = array() ) {
+		return $this->add_field( $id, $args, 'typography' );
+	}
+
+	function add_multicolor( $id, $args = array() ) {
+		$defaults = array(
+			'type'    => 'multicolor',
+			'choices' => array(),
+			'link'    => __( 'Color' ),
+			'hover'   => __( 'Hover' ),
+			'active'  => __( 'Active' )
+		);
+
+		$shortcut = array( 'label', 'default', 'link', 'hover', 'active', 'description', 'priority' );
+
+		$args = self::parse_arguments( $defaults,
+			self::parse_indexed_arguments( $args, $shortcut )
+		);
+
+		$args['choices'] = self::parse_arguments(
+			self::extract_values( array( 'link', 'hover', 'active' ), $args ), $args['choices'] );
+
+		unset( $args['link'], $args['hover'], $args['active'] );
+
+		return $this->add( $id, $args );
+	}
+
+	/// Wrapped Fields
+
+	function add_color_text( $id, $args = array() ) {
+		$defaults = $this->get_output( $id, 'color', array() );
+
+		return $this->add_color_field( $id, self::parse_arguments( $defaults,
+			self::parse_indexed_arguments( $args, array( 'label', 'default', 'alpha', 'description', 'priority' ) )
+		) );
+	}
+
+	function add_image_background( $id, $args = array() ) {
+
+		$defaults = $this->get_output( $id, 'background-image', array() );
+
+		return $this->add_image_field( $id, self::parse_arguments( $defaults,
+			self::parse_indexed_arguments( $args, array( 'label', 'default', 'description', 'priority', 'help' ) )
+		) );
+	}
+
+	function add_color_background( $id, $args = array() ) {
+		$defaults = $this->get_output( $id, 'background-color', array() );
+
+		return $this->add_color_field( $id, self::parse_arguments( $defaults,
+			self::parse_indexed_arguments( $args, array( 'label', 'default', 'alpha', 'description', 'priority' ) )
+		) );
+	}
+
+	/// Save methods
+
+	function save_panels() {
+		$panels = $this->divisions['panels'];
+		foreach ( $panels as $id => $panel ) {
+			if ( ! isset( $this->saved['panels'][ $id ] ) || ! $this->saved['panels'][ $id ] ) {
+				Kirki::add_panel( $id, $panel );
+				$this->saved['panels'][ $id ] = true;
+			}
+		}
+
+		return $this;
+	}
+
+	function save_sections() {
+		$sections = $this->divisions['sections'];
+		foreach ( $sections as $id => $section ) {
+			if ( ! isset( $this->saved['sections'][ $id ] ) || ! $this->saved['sections'][ $id ] ) {
+				Kirki::add_section( $id, $section );
+				$this->saved['sections'][ $id ] = true;
+			}
+		}
+
+		return $this;
+	}
+
+	function save_fields() {
+		$fields = $this->settings;
+		foreach ( $fields as $id => $field ) {
+			if ( ! isset( $this->saved['fields'][ $id ] ) || ! $this->saved['fields'][ $id ] ) {
+				Kirki::add_field( $this->kirki_id, $field );
+				$this->saved['fields'][ $id ] = true;
+			}
+		}
+
+		return $this;
+	}
+	/// Getters and renders
 
 	/**
 	 * Get the setting
@@ -260,426 +788,6 @@ class WPCG_Customizer_Generator {
 		echo $this->get_setting_attributes( $setting );
 	}
 
-	function add( $id, $args = array() ) {
-		$defaults = array(
-			'type'            => 'text',
-			'section'         => $this->current_section,
-			'render_callback' => false,
-			'shortcut'        => false,
-			'partial_refresh' => array(),
-			'js_vars'         => array(),
-		);
-
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, array( 'type', 'label', 'default', 'description' ) )
-		);
-
-		if ( true === $args['partial_refresh'] ) {
-			$args['partial_refresh'] = array();
-//			$args['transport']       = 'postMessage';
-			$args['partial_refresh'][ $id ] = array(
-				'selector'        => sprintf( $this->partial_selector_mask, $id ),
-				'render_callback' => $args['render_callback'] ? $args['render_callback'] : $this->get_render_callback( $args ),
-			);
-		} else if ( $args['shortcut'] ) {
-			// add a fake partial, that return false. this way, will work as a edit shortcut only.
-			$args['partial_refresh'][ sprintf( "%s-shortcut", $id ) ] = array(
-				'selector'        => is_string( $args['shortcut'] ) ? $args['shortcut'] : sprintf( $this->partial_selector_mask, $id ),
-				'render_callback' => '__return_false'
-			);
-		}
-
-		$args['settings'] = $id;
-
-		$this->settings[ $id ] = $args;
-
-		unset( $args['render_callback'], $args['shortcut'] );
-
-		$this->the_current_setting( $id );
-
-		Kirki::add_field( $this->kirki_id, $args );
-
-		return $this;
-
-	}
-
-	function add_message( $args = array(), $id = null ) {
-		$default = array(
-			'type' => 'custom',
-		);
-
-		$args = self::parse_arguments( $default,
-			self::parse_indexed_arguments( $args, array( 'default', 'label', 'priority', 'description' ) )
-		);
-
-		$id = $this->get_random_message_id( $id );
-
-		return $this->add( $id, $args );
-	}
-
-	// Base Fields
-	private function add_field( $id, $args = array(), $defaults = array(), $shortcut = array() ) {
-		$shortcut = $shortcut ? $shortcut : array( 'label', 'default', 'description', 'priority', 'help' );
-		$defaults = self::parse_arguments( array(
-			'type' => 'text',
-		), self::parse_indexed_arguments( $defaults, array( 'type', 'partial_refresh' ) ) );
-
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, $shortcut )
-		);
-
-		return $this->add( $id, $args );
-	}
-
-	// Text Fields
-	function add_text_field( $id, $args = array() ) {
-		return $this->add_field( $id, $args, 'text' );
-	}
-
-	function add_textarea_field( $id, $args = array() ) {
-		return $this->add_field( $id, $args, 'textarea' );
-	}
-
-	function add_code_field( $id, $args = array() ) {
-		$defaults = array(
-			'type'     => 'code',
-			'choices'  => array(),
-			'language' => 'css',
-			'theme'    => 'elegant',
-			'height'   => null,
-		);
-
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, array( 'label', 'default', 'language', 'description', 'priority' ) )
-		);
-
-		$args['choices'] = self::parse_arguments(
-			self::extract_values( array( 'language', 'theme', 'height' ), $args ), $args['choices'] );
-
-		unset( $args['language'], $args['theme'], $args['height'] );
-
-		return $this->add( $id, $args );
-	}
-
-	function add_number_field( $id, $args = array() ) {
-		$defaults = array(
-			'type'    => 'number',
-			'choices' => array(),
-			'min'     => - 999999999,
-			'max'     => 999999999,
-			'step'    => 1,
-		);
-
-		$shortcut = array( 'label', 'default', 'min', 'max', 'step', 'description', 'priority' );
-
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, $shortcut )
-		);
-
-		$args['choices'] = self::parse_arguments(
-			self::extract_values( array( 'min', 'max', 'step' ), $args ), $args['choices'] );
-
-		unset( $args['min'], $args['max'], $args['step'] );
-
-		return $this->add( $id, $args );
-	}
-
-	function add_dimension_field( $id, $args = array() ) {
-		return $this->add_field( $id, $args, 'dimension' );
-	}
-
-	// Choices Fields
-	private function add_choices_field( $id, $args = array(), $defaults = array(), $shortcut = array() ) {
-		$shortcut = $shortcut ? $shortcut : array( 'choices', 'label', 'default', 'description', 'priority', 'help' );
-		$defaults = self::parse_arguments( array(
-			'type'    => 'select',
-			'choices' => array()
-		), self::parse_indexed_arguments( $defaults, array( 'type', 'multiple' ) ) );
-
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, $shortcut )
-		);
-
-		return $this->add( $id, $args );
-	}
-
-	function add_select_field( $id, $args = array() ) {
-		return $this->add_choices_field( $id, $args, array( 'select', 1 ) );
-	}
-
-	function add_radio_field( $id, $args = array() ) {
-		return $this->add_choices_field( $id, $args, 'radio' );
-	}
-
-	function add_multicheck_field( $id, $args = array() ) {
-		return $this->add_choices_field( $id, $args, 'multicheck' );
-	}
-
-	function add_radio_image_field( $id, $args = array() ) {
-		return $this->add_choices_field( $id, $args, 'radio-image' );
-	}
-
-	function add_radio_buttonset_field( $id, $args = array() ) {
-		return $this->add_choices_field( $id, $args, 'radio-buttonset' );
-	}
-
-	function add_palette_field( $id, $args = array() ) {
-		return $this->add_choices_field( $id, $args, 'palette' );
-	}
-
-	function add_color_palette_field( $id, $args = array() ) {
-		return $this->add_choices_field( $id, $args, 'color-palette' );
-	}
-
-	function add_sortable_field( $id, $args = array() ) {
-		return $this->add_choices_field( $id, $args, 'sortable' );
-	}
-
-	// Boolean Fields
-	function add_checkbox_field( $id, $args = array() ) {
-		return $this->add_field( $id, $args, 'checkbox' );
-	}
-
-	function add_toggle_field( $id, $args = array() ) {
-		return $this->add_field( $id, $args, 'toggle' );
-	}
-
-	function add_switch_field( $id, $args = array() ) {
-		$defaults = array(
-			'type'    => 'switch',
-			'choices' => array(),
-			'on'      => __( 'On' ),
-			'off'     => __( 'Off' ),
-		);
-
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, array( 'label', 'default', 'on', 'off', 'description', 'priority' ) )
-		);
-
-		$args['choices'] = self::parse_arguments(
-			self::extract_values( array( 'on', 'off' ), $args ), $args['choices'] );
-
-		unset( $args['on'], $args['off'] );
-
-		return $this->add( $id, $args );
-	}
-
-	// Other Fields
-
-	function add_image_field( $id, $args = array() ) {
-		return $this->add_field( $id, $args, 'image' );
-	}
-
-	function add_color_field( $id, $args = array() ) {
-		$defaults = array(
-			'type'    => 'color',
-			'choices' => array(),
-			'alpha'   => false
-		);
-
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, array( 'label', 'default', 'alpha', 'description', 'priority' ) )
-		);
-
-		$args['choices'] = self::parse_arguments( array( 'alpha' => $args['alpha'] ), $args['choices'] );
-
-		unset( $args['alpha'] );
-
-		return $this->add( $id, $args );
-	}
-
-	function add_dashicons_field( $id, $args = array() ) {
-		return $this->add_field( $id, $args, 'dashicons' );
-	}
-
-	function add_upload_field( $id, $args = array() ) {
-		return $this->add_field( $id, $args, 'upload' );
-	}
-
-	function add_dropdown_pages_field( $id, $args = array() ) {
-		return $this->add_field( $id, $args, 'dropdown-pages' );
-	}
-
-	function add_slider_field( $id, $args = array() ) {
-		$defaults = array(
-			'type'    => 'slider',
-			'choices' => array(),
-			'min'     => - 999999999,
-			'max'     => 999999999,
-			'step'    => 1,
-		);
-
-		$shortcut = array( 'label', 'default', 'min', 'max', 'step', 'description', 'priority' );
-
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, $shortcut )
-		);
-
-		return $this->add_number_field( $id, $args );
-	}
-
-	function add_spacing_field( $id, $args = array() ) {
-		return $this->add_field( $id, $args, 'spacing' );
-	}
-
-	function add_typography_field( $id, $args = array() ) {
-		return $this->add_field( $id, $args, 'typography' );
-	}
-
-	function add_multicolor_field( $id, $args = array() ) {
-		$defaults = array(
-			'type'    => 'multicolor',
-			'choices' => array(),
-			'link'    => __( 'Color' ),
-			'hover'   => __( 'Hover' ),
-			'active'  => __( 'Active' )
-		);
-
-		$shortcut = array( 'label', 'default', 'link', 'hover', 'active', 'description', 'priority' );
-
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, $shortcut )
-		);
-
-		$args['choices'] = self::parse_arguments(
-			self::extract_values( array( 'link', 'hover', 'active' ), $args ), $args['choices'] );
-
-		unset( $args['link'], $args['hover'], $args['active'] );
-
-		return $this->add( $id, $args );
-	}
-
-	/// Wrapped Fields
-
-	function add_color_text( $id, $args = array() ) {
-		$defaults = $this->get_output( $id, 'color', array() );
-
-		return $this->add_color_field( $id, self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, array( 'label', 'default', 'alpha', 'description', 'priority' ) )
-		) );
-	}
-
-	function add_image_background( $id, $args = array() ) {
-
-		$defaults = $this->get_output( $id, 'background-image', array() );
-
-		return $this->add_image_field( $id, self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, array( 'label', 'default', 'description', 'priority', 'help' ) )
-		) );
-	}
-
-	function add_color_background( $id, $args = array() ) {
-		$defaults = $this->get_output( $id, 'background-color', array() );
-
-		return $this->add_color_field( $id, self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, array( 'label', 'default', 'alpha', 'description', 'priority' ) )
-		) );
-	}
-
-	function add_text( $id, $args = array() ) {
-		return $this->add_field( $id, $args, array( 'text', true ) );
-	}
-
-	function add_textarea( $id, $args = array() ) {
-		return $this->add_field( $id, $args, array( 'textarea', true ) );
-	}
-
-	function add_image( $id, $args = array() ) {
-		return $this->add_field( $id, $args, array( 'image', true ) );
-	}
-
-	// Default Customizer Compatibility
-
-	/**
-	 * Add Default Customizer Setting
-	 *
-	 * @param string $id
-	 * @param array $args
-	 *
-	 * @return $this
-	 */
-	function add_setting( $id, $args = array() ) {
-
-		$this->wp_customize->add_setting( $id, $args );
-
-		$this->current_setting = $id;
-
-		return $this;
-	}
-
-	/**
-	 * Add Default Customizer Control
-	 *
-	 * @param string|bool $id
-	 * @param array $args
-	 *
-	 * @return $this
-	 */
-	function add_control( $id = true, $args = array() ) {
-
-		// when true, the current setting will be used
-		if ( $id === true ) {
-			$id = $this->current_setting;
-		}
-
-		// if an custom controller
-		if ( $id instanceof WP_Customize_Control ) {
-			$this->wp_customize->add_control( $id );
-
-			return $this;
-		}
-
-		$defaults = array(
-			'title'    => $id,
-			'settings' => '',
-			'section'  => $this->current_section,
-			'type'     => 'text'
-		);
-
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, array( 'title', 'description', 'priority', 'settings' ) )
-		);
-
-		// if setting not passed, is presumed that the $id is the setting. The mask is used.
-		if ( ! $args['settings'] ) {
-			$args['settings'] = $id;
-			$id               = sprintf( $this->control_mask, $id );
-		}
-
-		$this->wp_customize->add_control( $id, $args );
-
-		return $this;
-	}
-
-	/**
-	 * Add Default Customizer Partial
-	 *
-	 * @param bool $id
-	 * @param array $args
-	 *
-	 * @return $this
-	 */
-	function add_partial( $id = false, $args = array() ) {
-		if ( ! $this->has_partial() ) {
-			return $this;
-		}
-
-		$defaults = array(
-			'render_callback' => 'text',
-			'selector'        => sprintf( $this->partial_selector_mask, $id )
-		);
-
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, array( 'render_callback', 'selector' ) )
-		);
-
-		$render = $this->get_render_callback( $args['render_callback'] );
-
-		$args['render_callback'] = $render ? $render : $args['render_callback'];
-
-		return $this;
-	}
-
 	// Internal and logic functions
 
 	function the_current_setting( $setting = null ) {
@@ -709,13 +817,17 @@ class WPCG_Customizer_Generator {
 
 	// Helper Functions
 
-	private function get_random_message_id( $id = null ) {
+	private function get_random_key( $pattern = 'key-%s', $id = null ) {
 		if ( $id ) {
 			return $id;
 		}
-		$this->random_message_counter ++;
+		$this->random_counter ++;
 
-		return sprintf( 'message-%s', $this->random_message_counter );
+		return sprintf( $pattern, $this->random_counter );
+	}
+
+	private function get_random_message_id( $id = null ) {
+		return $this->get_random_key( 'message-%s', $id );
 	}
 
 	function has_partial() {
@@ -1015,5 +1127,126 @@ class WPCG_Customizer_Generator {
 	 */
 	function render_debug( $partial ) {
 		var_dump( $partial );
+	}
+
+	/// Default Customizer Compatibility
+
+	/**
+	 * Add Default Customizer Setting
+	 *
+	 * @param string $id
+	 * @param array $args
+	 *
+	 * @return $this
+	 */
+	function add_setting( $id, $args = array() ) {
+
+		$this->wp_customize->add_setting( $id, $args );
+
+		$this->current_setting = $id;
+
+		return $this;
+	}
+
+	/**
+	 * Add Default Customizer Control
+	 *
+	 * @param string|bool $id
+	 * @param array $args
+	 *
+	 * @return $this
+	 */
+	function add_control( $id = true, $args = array() ) {
+
+		// when true, the current setting will be used
+		if ( $id === true ) {
+			$id = $this->current_setting;
+		}
+
+		// if an custom controller
+		if ( $id instanceof WP_Customize_Control ) {
+			$this->wp_customize->add_control( $id );
+
+			return $this;
+		}
+
+		$defaults = array(
+			'title'    => $id,
+			'settings' => '',
+			'section'  => $this->current_section,
+			'type'     => 'text'
+		);
+
+		$args = self::parse_arguments( $defaults,
+			self::parse_indexed_arguments( $args, array( 'title', 'description', 'priority', 'settings' ) )
+		);
+
+		// if setting not passed, is presumed that the $id is the setting. The mask is used.
+		if ( ! $args['settings'] ) {
+			$args['settings'] = $id;
+			$id               = sprintf( $this->control_mask, $id );
+		}
+
+		$this->wp_customize->add_control( $id, $args );
+
+		return $this;
+	}
+
+	/**
+	 * Add Default Customizer Partial
+	 *
+	 * @param bool $id
+	 * @param array $args
+	 *
+	 * @return $this
+	 */
+	function add_partial( $id = false, $args = array() ) {
+		if ( ! $this->has_partial() ) {
+			return $this;
+		}
+
+		$defaults = array(
+			'render_callback' => 'text',
+			'selector'        => sprintf( $this->partial_selector_mask, $id )
+		);
+
+		$args = self::parse_arguments( $defaults,
+			self::parse_indexed_arguments( $args, array( 'render_callback', 'selector' ) )
+		);
+
+		$render = $this->get_render_callback( $args['render_callback'] );
+
+		$args['render_callback'] = $render ? $render : $args['render_callback'];
+
+		return $this;
+	}
+
+	// Initialize and hook methods
+
+	/**
+	 * Get Class Instance
+	 *
+	 * @param null $customize
+	 * @param array $args
+	 *
+	 * @return WPCG_Customizer_Generator
+	 */
+	static function get_instance( $customize = null, $args = array() ) {
+		return new WPCG_Customizer_Generator( $customize, $args );
+	}
+
+	/**
+	 * Main Initializer
+	 *
+	 * initialize an global instance
+	 */
+	static function init() {
+		global $wpcg_customize;
+
+		$wpcg_customize = self::get_instance();
+
+		do_action( 'wpcg_customize_register', $wpcg_customize );
+
+		$wpcg_customize->save();
 	}
 }
