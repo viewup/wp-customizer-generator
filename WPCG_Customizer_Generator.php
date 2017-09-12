@@ -142,7 +142,7 @@ class WPCG_Customizer_Generator {
 		}
 
 		// Add Kirki default config
-		Kirki::add_config( $this->kirki_id, array(
+		self::Kirki( 'add_config', $this->kirki_id, array(
 			'capability'  => 'edit_theme_options',
 			'option_type' => 'theme_mod',
 		) );
@@ -696,7 +696,7 @@ class WPCG_Customizer_Generator {
 		$panels = $this->divisions['panels'];
 		foreach ( $panels as $id => $panel ) {
 			if ( ! isset( $this->saved['panels'][ $id ] ) || ! $this->saved['panels'][ $id ] ) {
-				Kirki::add_panel( $id, $panel );
+				self::Kirki( 'add_panel', $id, $panel );
 				$this->saved['panels'][ $id ] = true;
 			}
 		}
@@ -708,7 +708,7 @@ class WPCG_Customizer_Generator {
 		$sections = $this->divisions['sections'];
 		foreach ( $sections as $id => $section ) {
 			if ( ! isset( $this->saved['sections'][ $id ] ) || ! $this->saved['sections'][ $id ] ) {
-				Kirki::add_section( $id, $section );
+				self::Kirki( 'add_section', $id, $section );
 				$this->saved['sections'][ $id ] = true;
 			}
 		}
@@ -720,7 +720,7 @@ class WPCG_Customizer_Generator {
 		$fields = $this->settings;
 		foreach ( $fields as $id => $field ) {
 			if ( ! isset( $this->saved['fields'][ $id ] ) || ! $this->saved['fields'][ $id ] ) {
-				Kirki::add_field( $this->kirki_id, $field );
+				self::Kirki( 'add_field', $this->kirki_id, $field );
 				$this->saved['fields'][ $id ] = true;
 			}
 		}
@@ -816,6 +816,12 @@ class WPCG_Customizer_Generator {
 	}
 
 	// Helper Functions
+
+	private static function Kirki( $method, $arg1 = null, $arg2 = null ) {
+		if ( class_exists( 'Kirki' ) ) {
+			call_user_func( "Kirki::{$method}", $arg1, $arg2 );
+		}
+	}
 
 	private function get_random_key( $pattern = 'key-%s', $id = null ) {
 		if ( $id ) {
