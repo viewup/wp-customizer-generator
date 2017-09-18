@@ -978,14 +978,9 @@ class WPCG_Customizer_Generator {
 	 * @return array
 	 */
 	static function parse_indexed_array( $values = array(), $keys = array() ) {
-		$args = array();
-		foreach ( $keys as $index => $key ) {
-			if ( isset( $values[ $index ] ) ) {
-				$args[ $key ] = $values[ $index ];
-			}
-		}
-
-		return $args;
+		$keys = count($keys) > count($values) ? array_slice($keys, 0, count($values) ): $keys;
+		$values = count($values) > count($keys) ? array_slice($values, 0, count($keys) ) : $values;
+		return array_combine($keys, $values);
 	}
 
 	/**
