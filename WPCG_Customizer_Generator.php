@@ -245,6 +245,7 @@ class WPCG_Customizer_Generator {
 	}
 
 	function add( $id, $args = array() ) {
+
 		$defaults = array(
 			'type'            => 'text',
 			'section'         => $this->current_section,
@@ -342,6 +343,46 @@ class WPCG_Customizer_Generator {
 
 	}
 
+	/**
+	 * Add edit shortcut for an field
+	 *
+	 * Can be called multiple times (multiple selectors)
+	 * useful when the field doesn't have an render but have some refference to edit it.
+	 *
+	 * NOTE: doesn't work with repeaters (kirki issue)
+	 *
+	 * @param string|null $selector - jQuery Selector
+	 * @param string|null $id - Field ID
+	 *
+	 * @return $this|WPCG_Customizer_Generator
+	 */
+	function shortcut( $selector = null, $id = null ) {
+		$id          = $this->the_current_setting( $id );
+		$selector    = is_string( $selector ) ? $selector : sprintf( $this->partial_selector_mask, $id );
+		$shortcut_id = sprintf( "%s-shortcut", $id );
+
+		if ( 'repeater' === $this->settings[ $id ]['type'] ) {
+			return $this;
+		}
+		// new shortcut
+		if ( ! isset( $this->settings[ $id ]['partial_refresh'][ $shortcut_id ] ) ) {
+			$partial = array(
+				'selector'        => $selector,
+				'render_callback' => '__return_false'
+			);
+
+			return $this->push_argument( 'partial_refresh', $partial, $id, $shortcut_id );
+		} else {
+			// TODO: Validate selector before insert (no-repeat)
+			if ( $selector != $this->settings[ $id ]['partial_refresh'][ $shortcut_id ]['selector'] ) {
+				$this->settings[ $id ]['partial_refresh'][ $shortcut_id ]['selector'] .= "," . $selector;
+			}
+		}
+
+		return $this;
+
+	}
+
 	function set_choices( $value = array(), $id = null ) {
 		return $this->set_argument( 'choices', $value, $id );
 	}
@@ -401,7 +442,7 @@ class WPCG_Customizer_Generator {
 
 		$args = self::parse_arguments( $defaults, self::parse_indexed_arguments( $args, array_keys( $defaults ) ) );
 
-		return $this->push_argument( 'js_vars', $args, $id, $key );
+		return $this->push_argument( 'partial_refresh', $args, $id, $key );
 	}
 
 	function js_vars( $args = array(), $id = null ) {
