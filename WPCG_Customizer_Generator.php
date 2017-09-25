@@ -509,13 +509,7 @@ class WPCG_Customizer_Generator {
 		);
 
 		$args = WPCG_Helper::parse_arguments( $defaults,
-			WPCG_Helper::parse_indexed_arguments( $args, array(
-				'label',
-				'default',
-				'language',
-				'description',
-				'priority'
-			) )
+			WPCG_Helper::parse_indexed_arguments( $args, array( 'label', 'default', 'language', 'description', 'priority' ) )
 		);
 
 		$args['choices'] = WPCG_Helper::parse_arguments(
@@ -618,14 +612,7 @@ class WPCG_Customizer_Generator {
 		);
 
 		$args = WPCG_Helper::parse_arguments( $defaults,
-			WPCG_Helper::parse_indexed_arguments( $args, array(
-				'label',
-				'default',
-				'on',
-				'off',
-				'description',
-				'priority'
-			) )
+			WPCG_Helper::parse_indexed_arguments( $args, array( 'label', 'default', 'on', 'off', 'description', 'priority' ) )
 		);
 
 		$args['choices'] = WPCG_Helper::parse_arguments(
@@ -650,13 +637,7 @@ class WPCG_Customizer_Generator {
 		);
 
 		$args = WPCG_Helper::parse_arguments( $defaults,
-			WPCG_Helper::parse_indexed_arguments( $args, array(
-				'label',
-				'default',
-				'alpha',
-				'description',
-				'priority'
-			) )
+			WPCG_Helper::parse_indexed_arguments( $args, array( 'label', 'default', 'alpha', 'description', 'priority' ) )
 		);
 
 		$args['choices'] = WPCG_Helper::parse_arguments( array( 'alpha' => $args['alpha'] ), $args['choices'] );
@@ -689,7 +670,11 @@ class WPCG_Customizer_Generator {
 
 		$shortcut = array( 'label', 'default', 'min', 'max', 'step', 'description', 'priority' );
 
-		return $this->add_field( $id, $args, $defaults, $shortcut );
+		$args = WPCG_Helper::parse_arguments( $defaults,
+			WPCG_Helper::parse_indexed_arguments( $args, $shortcut )
+		);
+
+		return $this->add_number_field( $id, $args );
 	}
 
 	function add_spacing( $id, $args = array() ) {
@@ -729,13 +714,7 @@ class WPCG_Customizer_Generator {
 		$defaults = $this->get_output( $id, 'color', array() );
 
 		return $this->add_color_field( $id, WPCG_Helper::parse_arguments( $defaults,
-			WPCG_Helper::parse_indexed_arguments( $args, array(
-				'label',
-				'default',
-				'alpha',
-				'description',
-				'priority'
-			) )
+			WPCG_Helper::parse_indexed_arguments( $args, array( 'label', 'default', 'alpha', 'description', 'priority' ) )
 		) );
 	}
 
@@ -744,13 +723,7 @@ class WPCG_Customizer_Generator {
 		$defaults = $this->get_output( $id, 'background-image', array() );
 
 		return $this->add_image_field( $id, WPCG_Helper::parse_arguments( $defaults,
-			WPCG_Helper::parse_indexed_arguments( $args, array(
-				'label',
-				'default',
-				'description',
-				'priority',
-				'help'
-			) )
+			WPCG_Helper::parse_indexed_arguments( $args, array( 'label', 'default', 'description', 'priority', 'help' ) )
 		) );
 	}
 
@@ -758,13 +731,7 @@ class WPCG_Customizer_Generator {
 		$defaults = $this->get_output( $id, 'background-color', array() );
 
 		return $this->add_color_field( $id, WPCG_Helper::parse_arguments( $defaults,
-			WPCG_Helper::parse_indexed_arguments( $args, array(
-				'label',
-				'default',
-				'alpha',
-				'description',
-				'priority'
-			) )
+			WPCG_Helper::parse_indexed_arguments( $args, array( 'label', 'default', 'alpha', 'description', 'priority' ) )
 		) );
 	}
 
