@@ -129,7 +129,7 @@ class WPCG_Customizer_Generator {
 			'partial_selector_mask' => $this->partial_selector_mask,
 		);
 
-		$settings = self::parse_arguments( $defaults, $args );
+		$settings = self::parse_arguments( apply_filters( 'wpcg_init_defaults', $defaults, $this ), $args );
 
 		// update settings
 		$this->set_wp_customize( $customize );
@@ -246,7 +246,7 @@ class WPCG_Customizer_Generator {
 
 	function add( $id, $args = array() ) {
 
-		$defaults = array(
+		$defaults = apply_filters( 'wpcg_add_defaults', array(
 			'type'            => 'text',
 			'section'         => $this->current_section,
 			'render'          => false,
@@ -256,7 +256,7 @@ class WPCG_Customizer_Generator {
 			'js_vars'         => array(),
 			'output'          => array(),
 			'active_callback' => array(),
-		);
+		), $this );
 
 		$args = self::parse_arguments( $defaults,
 			self::parse_indexed_arguments( $args, array( 'type', 'label', 'default', 'description' ) )
@@ -283,7 +283,7 @@ class WPCG_Customizer_Generator {
 		$this->current_type = 'setting';
 
 		// Add field to save
-		$this->settings[ $id ] = $args;
+		$this->settings[ $id ] = apply_filters( 'wpcg_add', $args, $this );
 
 		/// automatic edits and inserts
 		// shortcut
