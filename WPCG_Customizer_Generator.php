@@ -262,16 +262,12 @@ class WPCG_Customizer_Generator {
 			self::parse_indexed_arguments( $args, array( 'type', 'label', 'default', 'description' ) )
 		);
 
+		$shortcut = $args['shortcut'];
+
 		if ( $args['partial'] || $args['render'] ) {
 			$args['partial_refresh'][ $id ] = array(
 				'selector'        => sprintf( $this->partial_selector_mask, $id ),
 				'render_callback' => $this->get_render_callback( $args ),
-			);
-		} else if ( $args['shortcut'] ) {
-			// add a fake partial, that return false. this way, will work as a edit shortcut only.
-			$args['partial_refresh'][ sprintf( "%s-shortcut", $id ) ] = array(
-				'selector'        => is_string( $args['shortcut'] ) ? $args['shortcut'] : sprintf( $this->partial_selector_mask, $id ),
-				'render_callback' => '__return_false'
 			);
 		}
 
@@ -280,6 +276,7 @@ class WPCG_Customizer_Generator {
 		// remove unecessary fields
 		unset( $args['render_callback'], $args['shortcut'], $args['partial'], $args['render'] );
 
+		// update current setting
 		$this->the_current_setting( $id );
 
 		// Update Current editing type
@@ -287,6 +284,13 @@ class WPCG_Customizer_Generator {
 
 		// Add field to save
 		$this->settings[ $id ] = $args;
+
+		// automatic edits and inserts
+
+		// automatic shortcut
+		if ( $shortcut ) {
+			$this->shortcut( $shortcut );
+		}
 
 		return $this;
 
@@ -361,6 +365,7 @@ class WPCG_Customizer_Generator {
 		$selector    = is_string( $selector ) ? $selector : sprintf( $this->partial_selector_mask, $id );
 		$shortcut_id = sprintf( "%s-shortcut", $id );
 
+		// Kirki incompatibility
 		if ( 'repeater' === $this->settings[ $id ]['type'] ) {
 			return $this;
 		}
