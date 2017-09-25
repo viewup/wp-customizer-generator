@@ -285,9 +285,8 @@ class WPCG_Customizer_Generator {
 		// Add field to save
 		$this->settings[ $id ] = $args;
 
-		// automatic edits and inserts
-
-		// automatic shortcut
+		/// automatic edits and inserts
+		// shortcut
 		if ( $shortcut ) {
 			$this->shortcut( $shortcut );
 		}
