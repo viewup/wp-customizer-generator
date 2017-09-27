@@ -265,6 +265,40 @@ class WPCG_Customizer_Generator {
 
 	}
 
+	function set_choices( $value = array(), $id = null ) {
+		return $this->set_argument( 'choices', $value, $id );
+	}
+
+	function add_choice( $name, $value = null, $id = null ) {
+		$value = ( null === $value ) ? $name : $value;
+
+		return $this->push_argument( 'choices', $value, $id, $name );
+	}
+
+	function set_default( $value, $id = null ) {
+		return $this->set_argument( 'default', $value, $id );
+	}
+
+	function label( $value, $id = null ) {
+		return $this->set_argument( 'label', $value, $id );
+	}
+
+	function description( $value, $id = null ) {
+		return $this->set_argument( 'description', $value, $id );
+	}
+
+	function tooltip( $value, $id = null ) {
+		return $this->set_argument( 'tooltip', $value, $id );
+	}
+
+	function multiple( $value = 1, $id = null ) {
+		return $this->set_argument( 'multiple', $value, $id );
+	}
+
+	function sanitize_callback( $value = 1, $id = null ) {
+		return $this->set_argument( 'sanitize_callback', $value, $id );
+	}
+
 	/**
 	 * Add edit shortcut for an field
 	 *
@@ -306,34 +340,18 @@ class WPCG_Customizer_Generator {
 
 	}
 
-	function set_choices( $value = array(), $id = null ) {
-		return $this->set_argument( 'choices', $value, $id );
-	}
+	function partial_refresh( $args = array(), $key = null, $id = null ) {
+		$id  = $this->the_current_setting( $id );
+		$key = $this->get_random_key( 'partial-%s', $key );
 
-	function add_choice( $name, $value = null, $id = null ) {
-		$value = ( null === $value ) ? $name : $value;
+		$defaults = array(
+			'render_callback' => '',
+			'selector'        => $this->get_selector( $id )
+		);
 
-		return $this->push_argument( 'choices', $value, $id, $name );
-	}
+		$args = WPCG_Helper::parse_arguments( $defaults, WPCG_Helper::parse_indexed_arguments( $args, array_keys( $defaults ) ) );
 
-	function set_default( $value, $id = null ) {
-		return $this->set_argument( 'default', $value, $id );
-	}
-
-	function label( $value, $id = null ) {
-		return $this->set_argument( 'label', $value, $id );
-	}
-
-	function description( $value, $id = null ) {
-		return $this->set_argument( 'description', $value, $id );
-	}
-
-	function tooltip( $value, $id = null ) {
-		return $this->set_argument( 'tooltip', $value, $id );
-	}
-
-	function multiple( $value = 1, $id = null ) {
-		return $this->set_argument( 'multiple', $value, $id );
+		return $this->push_argument( 'partial_refresh', $args, $id, $key );
 	}
 
 	function output( $args = array(), $id = null ) {
@@ -348,24 +366,6 @@ class WPCG_Customizer_Generator {
 		$args = WPCG_Helper::parse_arguments( $defaults, WPCG_Helper::parse_indexed_arguments( $args, array_keys( $defaults ) ) );
 
 		return $this->push_argument( 'output', $args );
-	}
-
-	function sanitize_callback( $value = 1, $id = null ) {
-		return $this->set_argument( 'sanitize_callback', $value, $id );
-	}
-
-	function partial_refresh( $args = array(), $key = null, $id = null ) {
-		$id  = $this->the_current_setting( $id );
-		$key = $this->get_random_key( 'partial-%s', $key );
-
-		$defaults = array(
-			'render_callback' => '',
-			'selector'        => $this->get_selector( $id )
-		);
-
-		$args = WPCG_Helper::parse_arguments( $defaults, WPCG_Helper::parse_indexed_arguments( $args, array_keys( $defaults ) ) );
-
-		return $this->push_argument( 'partial_refresh', $args, $id, $key );
 	}
 
 	function js_vars( $args = array(), $id = null ) {
