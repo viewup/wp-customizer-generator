@@ -99,6 +99,8 @@ class WPCG_Helper {
 	 */
 	static function extract_values( $keys = array(), $values = array() ) {
 		$extracted = array();
+		$keys      = WPCG_Helper::array_argument( $keys );
+
 		foreach ( $keys as $key ) {
 			if ( isset( $values[ $key ] ) ) {
 				$extracted[ $key ] = $values[ $key ];
