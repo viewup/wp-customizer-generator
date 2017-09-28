@@ -193,4 +193,8 @@ class WPCG_Helper {
 		return Kirki_Helper::get_terms( $taxonomies );
 	}
 
+	static function get_partial_setting( $partial ) {
+		return wpcg_get_setting( self::get_partial_id( $partial ) );
+	}
+
 }
