@@ -299,6 +299,10 @@ class WPCG_Customizer_Generator {
 		return $this->set_argument( 'sanitize_callback', $value, $id );
 	}
 
+	function transport( $type = 'auto', $id = null ) {
+		return $this->set_argument( 'transport', $type, $id );
+	}
+
 	/**
 	 * Add edit shortcut for an field
 	 *
@@ -349,7 +353,9 @@ class WPCG_Customizer_Generator {
 			'selector'        => $this->get_selector( $id )
 		);
 
+
 		$args = WPCG_Helper::parse_arguments( $defaults, WPCG_Helper::parse_indexed_arguments( $args, array_keys( $defaults ) ) );
+
 
 		return $this->push_argument( 'partial_refresh', $args, $id, $key );
 	}
@@ -363,9 +369,20 @@ class WPCG_Customizer_Generator {
 			'element'  => $this->get_selector( $id )
 		);
 
+		if ( is_string( $args ) ) {
+			switch ( $args ) {
+				case 'background-image':
+					$defaults = array(
+						'prefix' => "url('",
+						'sufix'  => "')"
+					);
+					break;
+			}
+		}
+
 		$args = WPCG_Helper::parse_arguments( $defaults, WPCG_Helper::parse_indexed_arguments( $args, array_keys( $defaults ) ) );
 
-		return $this->push_argument( 'output', $args );
+		return $this->push_argument( 'output', $args )->transport();
 	}
 
 	function js_vars( $args = array(), $id = null ) {
@@ -377,7 +394,7 @@ class WPCG_Customizer_Generator {
 		);
 		$args     = WPCG_Helper::parse_arguments( $defaults, WPCG_Helper::parse_indexed_arguments( $args, array_keys( $defaults ) ) );
 
-		return $this->push_argument( 'js_vars', $args, $id );
+		return $this->push_argument( 'js_vars', $args, $id )->transport('postMessage');
 	}
 
 	/**
@@ -468,11 +485,19 @@ class WPCG_Customizer_Generator {
 
 	// Text Fields
 	function add_text( $id, $args = array() ) {
-		return $this->add_field( $id, $args, 'text' );
+		return $this->add_field( $id, $args, 'text' )
+		            ->partial_refresh( array( $this->get_render_callback( 'text' ) ), $id )
+		            ->js_vars();
 	}
 
 	function add_textarea( $id, $args = array() ) {
-		return $this->add_field( $id, $args, 'textarea' );
+		return $this->add_field( $id, $args, 'textarea' )
+		            ->partial_refresh( array( $this->get_render_callback( 'editor' ) ), $id );
+	}
+
+	function add_editor( $id, $args = array() ) {
+		return $this->add_field( $id, $args, 'editor' )
+		            ->partial_refresh( array( $this->get_render_callback( 'editor' ) ), $id );
 	}
 
 	function add_code( $id, $args = array() ) {
@@ -568,7 +593,13 @@ class WPCG_Customizer_Generator {
 	// Other Fields
 
 	function add_image( $id, $args = array() ) {
-		return $this->add_field( $id, $args, 'image' );
+		return $this->add_field( $id, $args, 'image' )
+		            ->partial_refresh( array( $this->get_render_callback( 'image' ) ), $id );
+	}
+
+	function add_image_background( $id, $args = array() ) {
+		return $this->add_field( $id, $args, 'image' )
+		            ->output( 'background-image' );
 	}
 
 	function add_color( $id, $args = array() ) {
@@ -576,6 +607,14 @@ class WPCG_Customizer_Generator {
 			array( 'label', 'default', 'alpha', 'description', 'priority' ), 'alpha' );
 
 		return $this->add( $id, $args );
+	}
+
+	function add_color_text( $id, $args = array() ) {
+		return $this->add_color( $id, $args )->output( 'color' );
+	}
+
+	function add_color_background( $id, $args = array() ) {
+		return $this->add_color( $id, $args )->output( 'background-color' );
 	}
 
 	function add_dashicons( $id, $args = array() ) {
@@ -686,7 +725,6 @@ class WPCG_Customizer_Generator {
 		if ( isset( $this->settings[ $id ], $this->settings[ $id ]['partial_refresh'][ $id ] ) ) {
 			$render = $this->settings[ $id ]['partial_refresh'][ $id ]['render_callback'];
 		}
-
 		echo call_user_func( $render, $id );
 	}
 
@@ -811,10 +849,11 @@ class WPCG_Customizer_Generator {
 		switch ( $type ) {
 			case 'image':
 				return array( $this, 'render_image' );
-			case 'html':
 			case 'code':
 			case 'shortcode':
+			case 'editor':
 				return array( $this, 'render_html' );
+			case 'html':
 			case 'text':
 			case 'echo':
 			default:
@@ -925,7 +964,7 @@ class WPCG_Customizer_Generator {
 	 * @return string|false
 	 */
 	function render_html( $partial ) {
-		return do_shortcode( $this->get_partial_setting( $partial ) );
+		return apply_filters( 'the_content', $this->get_partial_setting( $partial ) );
 	}
 
 	/**
