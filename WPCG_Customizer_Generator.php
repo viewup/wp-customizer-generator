@@ -110,13 +110,6 @@ class WPCG_Customizer_Generator {
 	private $saved = array( 'panels' => array(), 'sections' => array(), 'fields' => array() );
 
 	/**
-	 * Fields and Methods defaults. Updated on set_defaults
-	 *
-	 * @var array
-	 */
-	private $defaults = array();
-
-	/**
 	 * WPCG_Customizer_Generator constructor.
 	 *
 	 * @param WP_Customize_Manager|null $customize
@@ -124,12 +117,12 @@ class WPCG_Customizer_Generator {
 	 */
 	function __construct( $customize = null, $args = array() ) {
 		// default settings
-		$defaults = array(
+		$defaults = apply_filters( 'wpcg_init_defaults', array(
 			'control_mask'          => $this->control_mask,
 			'partial_selector_mask' => $this->partial_selector_mask,
-		);
+		), $this );
 
-		$settings = self::parse_arguments( $defaults, $args );
+		$settings = WPCG_Helper::parse_arguments( $defaults, $args );
 
 		// update settings
 		$this->set_wp_customize( $customize );
@@ -159,17 +152,12 @@ class WPCG_Customizer_Generator {
 	 * @return WPCG_Customizer_Generator
 	 */
 	function add_panel( $id = 'theme-panel', $args = array(), $callback = null ) {
-
-		// default values
-		$defaults = array( 'title' => $id );
-
-		$args = self::parse_arguments( $defaults,
-			// fix indexed arguments and non-array arguments
-			self::parse_indexed_arguments( $args, array( 'title', 'priority', 'description' ) )
+		$args = WPCG_Helper::parse_arguments( array( 'title' => $id ),
+			WPCG_Helper::parse_indexed_arguments( $args, array( 'title', 'priority', 'description' ) )
 		);
 
 		if ( $args['title'] === $id ) {
-			$id = self::sanitize( $id );
+			$id = WPCG_Helper::sanitize( $id );
 		}
 
 		// add new panel to save
@@ -202,13 +190,13 @@ class WPCG_Customizer_Generator {
 			'panel' => $this->current_panel
 		);
 
-		$args = self::parse_arguments( $defaults,
+		$args = WPCG_Helper::parse_arguments( $defaults,
 			// fix indexed arguments and non-array arguments
-			self::parse_indexed_arguments( $args, array( 'title', 'priority', 'description' ) )
+			WPCG_Helper::parse_indexed_arguments( $args, array( 'title', 'priority', 'description' ) )
 		);
 
 		if ( $args['title'] === $id ) {
-			$id = self::sanitize( $id );
+			$id = WPCG_Helper::sanitize( $id );
 		}
 
 		// add new section to save
@@ -224,77 +212,7 @@ class WPCG_Customizer_Generator {
 		return $this->execute( $callback );
 	}
 
-	/**
-	 * Add custom message on the current/selected section
-	 *
-	 * @param string|array $args Message or settings array
-	 * @param null $id Id of message
-	 *
-	 * @return WPCG_Customizer_Generator
-	 */
-	function add_message( $args = array(), $id = null ) {
-		$default = array( 'type' => 'custom' );
-
-		$args = self::parse_arguments( $default,
-			self::parse_indexed_arguments( $args, array( 'default', 'label', 'priority', 'description' ) )
-		);
-
-		$id = $this->get_random_message_id( $id );
-
-		return $this->add( $id, $args );
-	}
-
-	function add( $id, $args = array() ) {
-
-		$defaults = array(
-			'type'            => 'text',
-			'section'         => $this->current_section,
-			'render'          => false,
-			'shortcut'        => false,
-			'partial'         => array(),
-			'partial_refresh' => array(),
-			'js_vars'         => array(),
-			'output'          => array(),
-			'active_callback' => array(),
-		);
-
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, array( 'type', 'label', 'default', 'description' ) )
-		);
-
-		$shortcut = $args['shortcut'];
-
-		if ( $args['partial'] || $args['render'] ) {
-			$args['partial_refresh'][ $id ] = array(
-				'selector'        => sprintf( $this->partial_selector_mask, $id ),
-				'render_callback' => $this->get_render_callback( $args ),
-			);
-		}
-
-		$args['settings'] = $id;
-
-		// remove unecessary fields
-		unset( $args['render_callback'], $args['shortcut'], $args['partial'], $args['render'] );
-
-		// update current setting
-		$this->the_current_setting( $id );
-
-		// Update Current editing type
-		$this->current_type = 'setting';
-
-		// Add field to save
-		$this->settings[ $id ] = $args;
-
-		// automatic edits and inserts
-
-		// automatic shortcut
-		if ( $shortcut ) {
-			$this->shortcut( $shortcut );
-		}
-
-		return $this;
-
-	}
+	/// Edit methods
 
 	function set_argument( $name, $value, $id = null ) {
 		$id = $this->the_current_setting( $id );
@@ -340,11 +258,49 @@ class WPCG_Customizer_Generator {
 			'value'    => null,
 		);
 
-		$setting = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $setting, array_keys( $defaults ) ) );
+		$setting = WPCG_Helper::parse_arguments( $defaults,
+			WPCG_Helper::parse_indexed_arguments( $setting, array_keys( $defaults ) ) );
 
 		return $this->push_argument( 'active_callback', $setting, $id );
 
+	}
+
+	function set_choices( $value = array(), $id = null ) {
+		return $this->set_argument( 'choices', $value, $id );
+	}
+
+	function add_choice( $name, $value = null, $id = null ) {
+		$value = ( null === $value ) ? $name : $value;
+
+		return $this->push_argument( 'choices', $value, $id, $name );
+	}
+
+	function set_default( $value, $id = null ) {
+		return $this->set_argument( 'default', $value, $id );
+	}
+
+	function label( $value, $id = null ) {
+		return $this->set_argument( 'label', $value, $id );
+	}
+
+	function description( $value, $id = null ) {
+		return $this->set_argument( 'description', $value, $id );
+	}
+
+	function tooltip( $value, $id = null ) {
+		return $this->set_argument( 'tooltip', $value, $id );
+	}
+
+	function multiple( $value = 1, $id = null ) {
+		return $this->set_argument( 'multiple', $value, $id );
+	}
+
+	function sanitize_callback( $value = 1, $id = null ) {
+		return $this->set_argument( 'sanitize_callback', $value, $id );
+	}
+
+	function transport( $type = 'auto', $id = null ) {
+		return $this->set_argument( 'transport', $type, $id );
 	}
 
 	/**
@@ -388,34 +344,20 @@ class WPCG_Customizer_Generator {
 
 	}
 
-	function set_choices( $value = array(), $id = null ) {
-		return $this->set_argument( 'choices', $value, $id );
-	}
+	function partial_refresh( $args = array(), $key = null, $id = null ) {
+		$id  = $this->the_current_setting( $id );
+		$key = $this->get_random_key( 'partial-%s', $key );
 
-	function add_choice( $name, $value = null, $id = null ) {
-		$value = ( null === $value ) ? $name : $value;
+		$defaults = array(
+			'render_callback' => '',
+			'selector'        => $this->get_selector( $id )
+		);
 
-		return $this->push_argument( 'choices', $value, $id, $name );
-	}
 
-	function set_default( $value, $id = null ) {
-		return $this->set_argument( 'default', $value, $id );
-	}
+		$args = WPCG_Helper::parse_arguments( $defaults, WPCG_Helper::parse_indexed_arguments( $args, array_keys( $defaults ) ) );
 
-	function label( $value, $id = null ) {
-		return $this->set_argument( 'label', $value, $id );
-	}
 
-	function description( $value, $id = null ) {
-		return $this->set_argument( 'description', $value, $id );
-	}
-
-	function tooltip( $value, $id = null ) {
-		return $this->set_argument( 'tooltip', $value, $id );
-	}
-
-	function multiple( $value = 1, $id = null ) {
-		return $this->set_argument( 'multiple', $value, $id );
+		return $this->push_argument( 'partial_refresh', $args, $id, $key );
 	}
 
 	function output( $args = array(), $id = null ) {
@@ -427,27 +369,20 @@ class WPCG_Customizer_Generator {
 			'element'  => $this->get_selector( $id )
 		);
 
-		$args = self::parse_arguments( $defaults, self::parse_indexed_arguments( $args, array_keys( $defaults ) ) );
+		if ( is_string( $args ) ) {
+			switch ( $args ) {
+				case 'background-image':
+					$defaults = array(
+						'prefix' => "url('",
+						'sufix'  => "')"
+					);
+					break;
+			}
+		}
 
-		return $this->push_argument( 'output', $args );
-	}
+		$args = WPCG_Helper::parse_arguments( $defaults, WPCG_Helper::parse_indexed_arguments( $args, array_keys( $defaults ) ) );
 
-	function sanitize_callback( $value = 1, $id = null ) {
-		return $this->set_argument( 'sanitize_callback', $value, $id );
-	}
-
-	function partial_refresh( $args = array(), $key = null, $id = null ) {
-		$id  = $this->the_current_setting( $id );
-		$key = $this->get_random_key( 'partial-%s', $key );
-
-		$defaults = array(
-			'render_callback' => '',
-			'selector'        => $this->get_selector( $id )
-		);
-
-		$args = self::parse_arguments( $defaults, self::parse_indexed_arguments( $args, array_keys( $defaults ) ) );
-
-		return $this->push_argument( 'partial_refresh', $args, $id, $key );
+		return $this->push_argument( 'output', $args )->transport();
 	}
 
 	function js_vars( $args = array(), $id = null ) {
@@ -457,9 +392,9 @@ class WPCG_Customizer_Generator {
 			'property' => '',
 			'element'  => $this->get_selector( $id )
 		);
-		$args     = self::parse_arguments( $defaults, self::parse_indexed_arguments( $args, array_keys( $defaults ) ) );
+		$args     = WPCG_Helper::parse_arguments( $defaults, WPCG_Helper::parse_indexed_arguments( $args, array_keys( $defaults ) ) );
 
-		return $this->push_argument( 'js_vars', $args, $id );
+		return $this->push_argument( 'js_vars', $args, $id )->transport('postMessage');
 	}
 
 	/**
@@ -478,68 +413,115 @@ class WPCG_Customizer_Generator {
 	}
 
 	// Base Fields
-	private function add_field( $id, $args = array(), $defaults = array(), $shortcut = array() ) {
-		$shortcut = $shortcut ? $shortcut : array( 'label', 'default', 'description', 'priority', 'help' );
-		$defaults = self::parse_arguments( array(
-			'type' => 'text',
-		), self::parse_indexed_arguments( $defaults, array( 'type', 'partial_refresh' ) ) );
+	function add( $id, $args = array() ) {
+		$defaults = apply_filters( 'wpcg_add_defaults', array(
+			'type'            => 'text',
+			'section'         => $this->current_section,
+			'render'          => false,
+			'shortcut'        => false,
+			'partial'         => array(),
+			'partial_refresh' => array(),
+			'js_vars'         => array(),
+			'output'          => array(),
+			'active_callback' => array(),
+		), $this, $args );
 
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, $shortcut )
+		$args = WPCG_Helper::parse_arguments( $defaults,
+			WPCG_Helper::parse_indexed_arguments( $args, array( 'type', 'label', 'default', 'description' ) )
 		);
 
-		return $this->add( $id, $args );
+		// extract values
+		$shortcut = $args['shortcut'];
+
+		if ( $args['partial'] || $args['render'] ) {
+			$args['partial_refresh'][ $id ] = array(
+				'selector'        => sprintf( $this->partial_selector_mask, $id ),
+				'render_callback' => $this->get_render_callback( $args ),
+			);
+		}
+
+		$args['settings'] = $id;
+
+		// remove unecessary fields
+		unset( $args['render_callback'], $args['shortcut'], $args['partial'], $args['render'] );
+
+		// update current setting
+		$this->the_current_setting( $id );
+
+		// Update Current editing type
+		$this->current_type = 'setting';
+
+		// Add field to save
+		$this->settings[ $id ] = apply_filters( 'wpcg_add', $args, $this );
+
+		/// automatic edits and inserts
+		// shortcut
+		if ( $shortcut ) {
+			$this->shortcut( $shortcut );
+		}
+
+		return $this;
+	}
+
+	private function add_field( $id, $args = array(), $defaults = array(), $shortcut = array() ) {
+		return $this->add( $id,
+			self::parse_field_args( $args, $defaults, $shortcut )
+		);
+	}
+
+	/**
+	 * Add custom message on the current/selected section
+	 *
+	 * @param string|array $args Message or settings array
+	 * @param null $id Id of message
+	 *
+	 * @return WPCG_Customizer_Generator
+	 */
+	function add_message( $args = array(), $id = null ) {
+		$id = $this->get_random_message_id( $id );
+
+		return $this->add_field( $id, $args, 'custom', array( 'default', 'label', 'priority', 'description' ) );
 	}
 
 	// Text Fields
 	function add_text( $id, $args = array() ) {
-		return $this->add_field( $id, $args, 'text' );
+		return $this->add_field( $id, $args, 'text' )
+		            ->partial_refresh( array( $this->get_render_callback( 'text' ) ), $id )
+		            ->js_vars();
 	}
 
 	function add_textarea( $id, $args = array() ) {
-		return $this->add_field( $id, $args, 'textarea' );
+		return $this->add_field( $id, $args, 'textarea' )
+		            ->partial_refresh( array( $this->get_render_callback( 'editor' ) ), $id );
+	}
+
+	function add_editor( $id, $args = array() ) {
+		return $this->add_field( $id, $args, 'editor' )
+		            ->partial_refresh( array( $this->get_render_callback( 'editor' ) ), $id );
 	}
 
 	function add_code( $id, $args = array() ) {
-		$defaults = array(
+		$args = self::parse_field_args( $args, array(
 			'type'     => 'code',
-			'choices'  => array(),
-			'language' => 'css',
+			'language' => 'html',
 			'theme'    => 'elegant',
 			'height'   => null,
-		);
-
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, array( 'label', 'default', 'language', 'description', 'priority' ) )
-		);
-
-		$args['choices'] = self::parse_arguments(
-			self::extract_values( array( 'language', 'theme', 'height' ), $args ), $args['choices'] );
-
-		unset( $args['language'], $args['theme'], $args['height'] );
+		),
+			array( 'label', 'default', 'language', 'description', 'priority' ),
+			array( 'language', 'theme', 'height' ) );
 
 		return $this->add( $id, $args );
 	}
 
 	function add_number( $id, $args = array() ) {
-		$defaults = array(
-			'type'    => 'number',
-			'choices' => array(),
-			'min'     => - 999999999,
-			'max'     => 999999999,
-			'step'    => 1,
-		);
-
-		$shortcut = array( 'label', 'default', 'min', 'max', 'step', 'description', 'priority' );
-
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, $shortcut )
-		);
-
-		$args['choices'] = self::parse_arguments(
-			self::extract_values( array( 'min', 'max', 'step' ), $args ), $args['choices'] );
-
-		unset( $args['min'], $args['max'], $args['step'] );
+		$args = self::parse_field_args( $args, array(
+			'type' => 'number',
+			'min'  => - 999999999,
+			'max'  => 999999999,
+			'step' => 1,
+		),
+			array( 'label', 'default', 'min', 'max', 'step', 'description', 'priority' ),
+			array( 'min', 'max', 'step' ) );
 
 		return $this->add( $id, $args );
 	}
@@ -551,16 +533,12 @@ class WPCG_Customizer_Generator {
 	// Choices Fields
 	private function add_choices_field( $id, $args = array(), $defaults = array(), $shortcut = array() ) {
 		$shortcut = $shortcut ? $shortcut : array( 'choices', 'label', 'default', 'description', 'priority', 'help' );
-		$defaults = self::parse_arguments( array(
+		$defaults = WPCG_Helper::parse_arguments( array(
 			'type'    => 'select',
 			'choices' => array()
-		), self::parse_indexed_arguments( $defaults, array( 'type', 'multiple' ) ) );
+		), WPCG_Helper::parse_indexed_arguments( $defaults, array( 'type', 'multiple' ) ) );
 
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, $shortcut )
-		);
-
-		return $this->add( $id, $args );
+		return $this->add_field( $id, $args, $defaults, $shortcut );
 	}
 
 	function add_select( $id, $args = array() ) {
@@ -605,21 +583,9 @@ class WPCG_Customizer_Generator {
 	}
 
 	function add_switch( $id, $args = array() ) {
-		$defaults = array(
-			'type'    => 'switch',
-			'choices' => array(),
-			'on'      => __( 'On' ),
-			'off'     => __( 'Off' ),
-		);
 
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, array( 'label', 'default', 'on', 'off', 'description', 'priority' ) )
-		);
-
-		$args['choices'] = self::parse_arguments(
-			self::extract_values( array( 'on', 'off' ), $args ), $args['choices'] );
-
-		unset( $args['on'], $args['off'] );
+		$args = self::parse_field_args( $args, 'switch',
+			array( 'label', 'default', 'on', 'off', 'description', 'priority' ), array( 'on', 'off' ) );
 
 		return $this->add( $id, $args );
 	}
@@ -627,25 +593,28 @@ class WPCG_Customizer_Generator {
 	// Other Fields
 
 	function add_image( $id, $args = array() ) {
-		return $this->add_field( $id, $args, 'image' );
+		return $this->add_field( $id, $args, 'image' )
+		            ->partial_refresh( array( $this->get_render_callback( 'image' ) ), $id );
+	}
+
+	function add_image_background( $id, $args = array() ) {
+		return $this->add_field( $id, $args, 'image' )
+		            ->output( 'background-image' );
 	}
 
 	function add_color( $id, $args = array() ) {
-		$defaults = array(
-			'type'    => 'color',
-			'choices' => array(),
-			'alpha'   => false
-		);
-
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, array( 'label', 'default', 'alpha', 'description', 'priority' ) )
-		);
-
-		$args['choices'] = self::parse_arguments( array( 'alpha' => $args['alpha'] ), $args['choices'] );
-
-		unset( $args['alpha'] );
+		$args = self::parse_field_args( $args, 'color',
+			array( 'label', 'default', 'alpha', 'description', 'priority' ), 'alpha' );
 
 		return $this->add( $id, $args );
+	}
+
+	function add_color_text( $id, $args = array() ) {
+		return $this->add_color( $id, $args )->output( 'color' );
+	}
+
+	function add_color_background( $id, $args = array() ) {
+		return $this->add_color( $id, $args )->output( 'background-color' );
 	}
 
 	function add_dashicons( $id, $args = array() ) {
@@ -661,21 +630,11 @@ class WPCG_Customizer_Generator {
 	}
 
 	function add_slider( $id, $args = array() ) {
-		$defaults = array(
-			'type'    => 'slider',
-			'choices' => array(),
-			'min'     => - 999999999,
-			'max'     => 999999999,
-			'step'    => 1,
-		);
+		$args = self::parse_field_args( $args, 'slider',
+			array( 'label', 'default', 'min', 'max', 'step', 'description', 'priority' ),
+			array( 'min', 'max', 'step' ) );
 
-		$shortcut = array( 'label', 'default', 'min', 'max', 'step', 'description', 'priority' );
-
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, $shortcut )
-		);
-
-		return $this->add_number_field( $id, $args );
+		return $this->add( $id, $args );
 	}
 
 	function add_spacing( $id, $args = array() ) {
@@ -687,57 +646,16 @@ class WPCG_Customizer_Generator {
 	}
 
 	function add_multicolor( $id, $args = array() ) {
-		$defaults = array(
-			'type'    => 'multicolor',
-			'choices' => array(),
-			'link'    => __( 'Color' ),
-			'hover'   => __( 'Hover' ),
-			'active'  => __( 'Active' )
-		);
-
-		$shortcut = array( 'label', 'default', 'link', 'hover', 'active', 'description', 'priority' );
-
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, $shortcut )
-		);
-
-		$args['choices'] = self::parse_arguments(
-			self::extract_values( array( 'link', 'hover', 'active' ), $args ), $args['choices'] );
-
-		unset( $args['link'], $args['hover'], $args['active'] );
+		$args = self::parse_field_args( $args, 'multicolor',
+			array( 'label', 'default', 'link', 'hover', 'active', 'description', 'priority' ),
+			array( 'link', 'hover', 'active' ) );
 
 		return $this->add( $id, $args );
 	}
 
 	/// Wrapped Fields
 
-	function add_color_text( $id, $args = array() ) {
-		$defaults = $this->get_output( $id, 'color', array() );
-
-		return $this->add_color_field( $id, self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, array( 'label', 'default', 'alpha', 'description', 'priority' ) )
-		) );
-	}
-
-	function add_image_background( $id, $args = array() ) {
-
-		$defaults = $this->get_output( $id, 'background-image', array() );
-
-		return $this->add_image_field( $id, self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, array( 'label', 'default', 'description', 'priority', 'help' ) )
-		) );
-	}
-
-	function add_color_background( $id, $args = array() ) {
-		$defaults = $this->get_output( $id, 'background-color', array() );
-
-		return $this->add_color_field( $id, self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, array( 'label', 'default', 'alpha', 'description', 'priority' ) )
-		) );
-	}
-
 	/// Save methods
-
 	function save_panels() {
 		$panels = $this->divisions['panels'];
 		foreach ( $panels as $id => $panel ) {
@@ -800,15 +718,13 @@ class WPCG_Customizer_Generator {
 	 * Output the setting using the defined function
 	 *
 	 * @param string $id
-	 * @param bool $default Setting Default(if not set, uses the defined default)
 	 */
-	function the_setting( $id = null, $default = false ) {
+	function the_setting( $id = null ) {
 		$id     = $this->the_current_setting( $id );
 		$render = array( $this, 'render_text' );
 		if ( isset( $this->settings[ $id ], $this->settings[ $id ]['partial_refresh'][ $id ] ) ) {
 			$render = $this->settings[ $id ]['partial_refresh'][ $id ]['render_callback'];
 		}
-
 		echo call_user_func( $render, $id );
 	}
 
@@ -820,7 +736,7 @@ class WPCG_Customizer_Generator {
 	 * @return string
 	 */
 	function get_setting_attributes( $setting = null ) {
-		$setting = self::array_argument( $this->the_current_setting( $setting ) );
+		$setting = WPCG_Helper::array_argument( $this->the_current_setting( $setting ) );
 
 		return sprintf( $this->setting_attribute_mask, implode( ' ', $setting ) );
 	}
@@ -863,6 +779,45 @@ class WPCG_Customizer_Generator {
 
 	// Helper Functions
 
+	/**
+	 * Parse field args to make field type
+	 *
+	 * @param array $args - user args
+	 * @param array|string $defaults - the field default or type
+	 * @param array|true $shortcut - Field shortcut or TRUE to use defaults as shortcut
+	 * @param string|array $choices - Custom Choice(s) to insert in 'choices' key.
+	 *
+	 * @return array parsed field args
+	 */
+	private static function parse_field_args( $args = array(), $defaults = array(), $shortcut = array(), $choices = array() ) {
+		$defaults = WPCG_Helper::parse_arguments( array(
+			'type' => 'text',
+		), WPCG_Helper::parse_indexed_arguments( $defaults, array( 'type' ) ) );
+
+		$shortcut = $shortcut ? $shortcut : array( 'label', 'default', 'description', 'priority', 'help' );
+
+		if ( true === $shortcut ) {
+			$shortcut = array_keys( $defaults );
+		}
+
+		$args = WPCG_Helper::parse_arguments( $defaults,
+			WPCG_Helper::parse_indexed_arguments( $args, $shortcut )
+		);
+
+		// custom choices
+		if ( $choices ) {
+			// initialize choices
+			$args['choices'] = $args['choices'] ? $args['choices'] : array();
+			$args['choices'] = WPCG_Helper::parse_arguments(
+				WPCG_Helper::extract_values( $choices, $args ), $args['choices'] );
+			foreach ( $choices as $field ) {
+				unset( $args[ $field ] );
+			}
+		}
+
+		return $args;
+	}
+
 	private static function Kirki( $method, $arg1 = null, $arg2 = null ) {
 		if ( class_exists( 'Kirki' ) ) {
 			call_user_func( "Kirki::{$method}", $arg1, $arg2 );
@@ -894,10 +849,11 @@ class WPCG_Customizer_Generator {
 		switch ( $type ) {
 			case 'image':
 				return array( $this, 'render_image' );
-			case 'html':
 			case 'code':
 			case 'shortcode':
+			case 'editor':
 				return array( $this, 'render_html' );
+			case 'html':
 			case 'text':
 			case 'echo':
 			default:
@@ -907,7 +863,7 @@ class WPCG_Customizer_Generator {
 
 	function get_output( $id, $output = array(), $merge = false ) {
 		// if passed an array of outputs
-		if ( self::is_matrix( $output ) ) {
+		if ( WPCG_Helper::is_matrix( $output ) ) {
 			$fields = array();
 			foreach ( $output as $item ) {
 				$fields[] = $this->get_output( $id, $item );
@@ -916,7 +872,7 @@ class WPCG_Customizer_Generator {
 				return $fields;
 			}
 
-			return self::parse_arguments( array(
+			return WPCG_Helper::parse_arguments( array(
 				'transport' => 'auto',
 				'output'    => $fields
 			), $merge );
@@ -928,8 +884,8 @@ class WPCG_Customizer_Generator {
 			'suffix'  => '',
 		);
 
-		$output = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $output, array( 'property', 'units', 'force', 'value_pattern' ) )
+		$output = WPCG_Helper::parse_arguments( $defaults,
+			WPCG_Helper::parse_indexed_arguments( $output, array( 'property', 'units', 'force', 'value_pattern' ) )
 		);
 		if ( $output['force'] ) {
 			$output['suffix'] .= ' !important';
@@ -940,7 +896,7 @@ class WPCG_Customizer_Generator {
 			return $output;
 		}
 
-		return self::parse_arguments( array(
+		return WPCG_Helper::parse_arguments( array(
 			'transport' => 'auto',
 			'output'    => array( $output )
 		), $merge );
@@ -965,170 +921,9 @@ class WPCG_Customizer_Generator {
 		return $this;
 	}
 
-	/**
-	 * Detects if an array is indexed
-	 *
-	 * @param array $array
-	 *
-	 * @return bool
-	 */
-	static function is_indexed_array( $array ) {
-		if ( ! is_array( $array ) ) {
-			return false;
-		}
-		if ( array() === $array ) {
-			return true;
-		}
-
-		return array_keys( $array ) === range( 0, count( $array ) - 1 );
-	}
-
-	/**
-	 * Detects if an variable is an array of arrays
-	 *
-	 * @param array $matrix
-	 *
-	 * @return bool
-	 */
-	static function is_matrix( $matrix = array() ) {
-		if ( ! self::is_indexed_array( $matrix ) ) {
-			return false;
-		}
-		foreach ( $matrix as $array ) {
-			if ( ! is_array( $array ) ) {
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	/**
-	 * Combine arguments array
-	 *
-	 * @param array $default
-	 * @param array $args
-	 *
-	 * @return array
-	 */
-	static function parse_arguments( $default = array(), $args = array() ) {
-		return array_merge( $default, $args );
-	}
-
-	/**
-	 * Parse a indexed array into a associative
-	 *
-	 * @param array $values indexed array values
-	 * @param array $keys associative array keys
-	 *
-	 * @return array
-	 */
-	static function parse_indexed_array( $values = array(), $keys = array() ) {
-		$args = array();
-		foreach ( $keys as $index => $key ) {
-			if ( isset( $values[ $index ] ) ) {
-				$args[ $key ] = $values[ $index ];
-			}
-		}
-
-		return $args;
-	}
-
-	/**
-	 * Parse indexed and non array arguments
-	 *
-	 * @param array|mixed $values
-	 * @param array $keys
-	 *
-	 * @return array
-	 */
-	static function parse_indexed_arguments( $values = array(), $keys = array() ) {
-		return self::parse_indexed_values( self::array_argument( $values ), $keys );
-	}
-
-	/**
-	 * Extract key values from array and make an array of the extracted values
-	 *
-	 * @param array $keys
-	 * @param array $values
-	 *
-	 * @return array
-	 */
-	static function extract_values( $keys = array(), $values = array() ) {
-		$extracted = array();
-		foreach ( $keys as $key ) {
-			if ( isset( $values[ $key ] ) ) {
-				$extracted[ $key ] = $values[ $key ];
-			}
-		}
-
-		return $extracted;
-	}
-
-	/**
-	 * Parse indexed values
-	 *
-	 * @param array $values
-	 * @param array $keys
-	 *
-	 * @return array
-	 */
-	static function parse_indexed_values( $values = array(), $keys = array() ) {
-		if ( self::is_indexed_array( $values ) ) {
-			return self::parse_indexed_array( $values, $keys );
-		}
-
-		return $values;
-	}
-
-	/**
-	 * Parse non-array argument to an array
-	 *
-	 * @param mixed $arg
-	 * @param string $key associative key. if not set, an indexed array will be created
-	 *
-	 * @return array
-	 */
-	static function array_argument( $arg, $key = null ) {
-		if ( ! is_array( $arg ) ) {
-			if ( $key ) {
-				return array( $key => $arg );
-			}
-
-			return array( $arg );
-		}
-
-		return $arg;
-	}
-
-	/**
-	 * Detect if is a partial and get the setting ID
-	 *
-	 * @param WP_Customize_Partial|string $partial
-	 *
-	 * @return mixed
-	 */
-	static function get_partial_id( $partial ) {
-		if ( is_string( $partial ) ) {
-			return $partial;
-		}
-
-		return $partial->primary_setting;
-	}
-
-	/**
-	 * Sanitize strings and fields ids
-	 *
-	 * @param string $string
-	 *
-	 * @return string
-	 */
-	static function sanitize( $string = '' ) {
-		return sanitize_title( $string );
-	}
 
 	function get_partial_setting( $partial ) {
-		return $this->get_setting( self::get_partial_id( $partial ) );
+		return $this->get_setting( WPCG_Helper::get_partial_id( $partial ) );
 	}
 
 	// Render Functions
@@ -1169,7 +964,7 @@ class WPCG_Customizer_Generator {
 	 * @return string|false
 	 */
 	function render_html( $partial ) {
-		return do_shortcode( $this->get_partial_setting( $partial ) );
+		return apply_filters( 'the_content', $this->get_partial_setting( $partial ) );
 	}
 
 	/**
@@ -1229,8 +1024,8 @@ class WPCG_Customizer_Generator {
 			'type'     => 'text'
 		);
 
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, array( 'title', 'description', 'priority', 'settings' ) )
+		$args = WPCG_Helper::parse_arguments( $defaults,
+			WPCG_Helper::parse_indexed_arguments( $args, array( 'title', 'description', 'priority', 'settings' ) )
 		);
 
 		// if setting not passed, is presumed that the $id is the setting. The mask is used.
@@ -1262,8 +1057,8 @@ class WPCG_Customizer_Generator {
 			'selector'        => sprintf( $this->partial_selector_mask, $id )
 		);
 
-		$args = self::parse_arguments( $defaults,
-			self::parse_indexed_arguments( $args, array( 'render_callback', 'selector' ) )
+		$args = WPCG_Helper::parse_arguments( $defaults,
+			WPCG_Helper::parse_indexed_arguments( $args, array( 'render_callback', 'selector' ) )
 		);
 
 		$render = $this->get_render_callback( $args['render_callback'] );
