@@ -15,7 +15,7 @@ class WPCG_Helper {
 	 *
 	 * @return bool
 	 */
-	static function is_indexed_array( $array ) {
+	public static function is_indexed_array( $array ) {
 		if ( ! is_array( $array ) ) {
 			return false;
 		}
@@ -33,7 +33,7 @@ class WPCG_Helper {
 	 *
 	 * @return bool
 	 */
-	static function is_matrix( $matrix = array() ) {
+	public static function is_matrix( $matrix = array() ) {
 		if ( ! WPCG_Helper::is_indexed_array( $matrix ) ) {
 			return false;
 		}
@@ -54,7 +54,7 @@ class WPCG_Helper {
 	 *
 	 * @return array
 	 */
-	static function parse_arguments( $default = array(), $args = array() ) {
+	public static function parse_arguments( $default = array(), $args = array() ) {
 		return array_merge( $default, $args );
 	}
 
@@ -66,7 +66,7 @@ class WPCG_Helper {
 	 *
 	 * @return array
 	 */
-	static function parse_indexed_array( $values = array(), $keys = array() ) {
+	public static function parse_indexed_array( $values = array(), $keys = array() ) {
 		$args = array();
 		foreach ( $keys as $index => $key ) {
 			if ( isset( $values[ $index ] ) ) {
@@ -85,7 +85,7 @@ class WPCG_Helper {
 	 *
 	 * @return array
 	 */
-	static function parse_indexed_arguments( $values = array(), $keys = array() ) {
+	public static function parse_indexed_arguments( $values = array(), $keys = array() ) {
 		return self::parse_indexed_values( self::array_argument( $values ), $keys );
 	}
 
@@ -97,7 +97,7 @@ class WPCG_Helper {
 	 *
 	 * @return array
 	 */
-	static function extract_values( $keys = array(), $values = array() ) {
+	public static function extract_values( $keys = array(), $values = array() ) {
 		$extracted = array();
 		$keys      = WPCG_Helper::array_argument( $keys );
 
@@ -118,7 +118,7 @@ class WPCG_Helper {
 	 *
 	 * @return array
 	 */
-	static function array_argument( $arg, $key = null ) {
+	public static function array_argument( $arg, $key = null ) {
 		if ( ! is_array( $arg ) ) {
 			if ( $key ) {
 				return array( $key => $arg );
@@ -138,7 +138,7 @@ class WPCG_Helper {
 	 *
 	 * @return array
 	 */
-	static function parse_indexed_values( $values = array(), $keys = array() ) {
+	public static function parse_indexed_values( $values = array(), $keys = array() ) {
 		if ( WPCG_Helper::is_indexed_array( $values ) ) {
 			return WPCG_Helper::parse_indexed_array( $values, $keys );
 		}
@@ -153,7 +153,7 @@ class WPCG_Helper {
 	 *
 	 * @return mixed
 	 */
-	static function get_partial_id( $partial ) {
+	public static function get_partial_id( $partial ) {
 		if ( is_string( $partial ) ) {
 			return $partial;
 		}
@@ -168,7 +168,7 @@ class WPCG_Helper {
 	 *
 	 * @return string
 	 */
-	static function sanitize( $string = '' ) {
+	public static function sanitize( $string = '' ) {
 		return sanitize_title( $string );
 	}
 
@@ -180,38 +180,41 @@ class WPCG_Helper {
 	 *
 	 * @param string $id - The image ID or URL
 	 *
+	 * @param string $size
+	 * @param bool $icon
+	 *
 	 * @return string
 	 */
-	static function fix_image_url( $id = '' ) {
+	public static function fix_image_url( $id = '', $size = 'thumbnail', $icon = false ) {
 		if ( is_numeric( $id ) ) {
-			return wp_get_attachment_url( (int) $id );
+			return wp_get_attachment_image_url( (int) $id, $size, $icon );
 		}
 
 		return $id ? $id : '';
 	}
 
 	// Kirki Wrapped methods
-	static function get_posts( $args ) {
+	public static function get_posts( $args ) {
 		return Kirki_Helper::get_posts( $args );
 	}
 
-	static function get_image_id( $url ) {
+	public static function get_image_id( $url ) {
 		return Kirki_Helper::get_image_id( $url );
 	}
 
-	static function get_image_from_url( $url ) {
+	public static function get_image_from_url( $url ) {
 		return Kirki_Helper::get_image_from_url( $url );
 	}
 
-	static function get_post_types() {
+	public static function get_post_types() {
 		return Kirki_Helper::get_post_types();
 	}
 
-	static function get_terms( $taxonomies ) {
+	public static function get_terms( $taxonomies ) {
 		return Kirki_Helper::get_terms( $taxonomies );
 	}
 
-	static function get_partial_setting( $partial ) {
+	public static function get_partial_setting( $partial ) {
 		return wpcg_get_setting( self::get_partial_id( $partial ) );
 	}
 

@@ -115,7 +115,7 @@ class WPCG_Customizer_Generator {
 	 * @param WP_Customize_Manager|null $customize
 	 * @param array $args
 	 */
-	function __construct( $customize = null, $args = array() ) {
+	public function __construct( $customize = null, $args = array() ) {
 		// default settings
 		$defaults = apply_filters( 'wpcg_init_defaults', array(
 			'control_mask'          => $this->control_mask,
@@ -151,7 +151,7 @@ class WPCG_Customizer_Generator {
 	 *
 	 * @return WPCG_Customizer_Generator
 	 */
-	function add_panel( $id = 'theme-panel', $args = array(), $callback = null ) {
+	public function add_panel( $id = 'theme-panel', $args = array(), $callback = null ) {
 		$args = WPCG_Helper::parse_arguments( array( 'title' => $id ),
 			WPCG_Helper::parse_indexed_arguments( $args, array( 'title', 'priority', 'description' ) )
 		);
@@ -182,7 +182,7 @@ class WPCG_Customizer_Generator {
 	 *
 	 * @return WPCG_Customizer_Generator
 	 */
-	function add_section( $id = 'theme-settings', $args = array(), $callback = null ) {
+	public function add_section( $id = 'theme-settings', $args = array(), $callback = null ) {
 
 		// default values
 		$defaults = array(
@@ -214,7 +214,7 @@ class WPCG_Customizer_Generator {
 
 	/// Edit methods
 
-	function set_argument( $name, $value, $id = null ) {
+	public function set_argument( $name, $value, $id = null ) {
 		$id = $this->the_current_setting( $id );
 
 		// field not found
@@ -227,7 +227,7 @@ class WPCG_Customizer_Generator {
 		return $this;
 	}
 
-	function push_argument( $name, $value, $id = null, $key = null ) {
+	public function push_argument( $name, $value, $id = null, $key = null ) {
 		$id = $this->the_current_setting( $id );
 
 		// field not found
@@ -243,15 +243,15 @@ class WPCG_Customizer_Generator {
 		return $this;
 	}
 
-	function capability( $value = 'edit_theme_options', $id = null ) {
+	public function capability( $value = 'edit_theme_options', $id = null ) {
 		return $this->set_argument( 'capability', $value, $id );
 	}
 
-	function priority( $value = 10, $id = null ) {
+	public function priority( $value = 10, $id = null ) {
 		return $this->set_argument( 'priority', $value, $id );
 	}
 
-	function condition( $setting = array(), $id = null ) {
+	public function condition( $setting = array(), $id = null ) {
 		$defaults = array(
 			'setting'  => '',
 			'operator' => '!=',
@@ -265,41 +265,41 @@ class WPCG_Customizer_Generator {
 
 	}
 
-	function set_choices( $value = array(), $id = null ) {
+	public function set_choices( $value = array(), $id = null ) {
 		return $this->set_argument( 'choices', $value, $id );
 	}
 
-	function add_choice( $name, $value = null, $id = null ) {
+	public function add_choice( $name, $value = null, $id = null ) {
 		$value = ( null === $value ) ? $name : $value;
 
 		return $this->push_argument( 'choices', $value, $id, $name );
 	}
 
-	function set_default( $value, $id = null ) {
+	public function set_default( $value, $id = null ) {
 		return $this->set_argument( 'default', $value, $id );
 	}
 
-	function label( $value, $id = null ) {
+	public function label( $value, $id = null ) {
 		return $this->set_argument( 'label', $value, $id );
 	}
 
-	function description( $value, $id = null ) {
+	public function description( $value, $id = null ) {
 		return $this->set_argument( 'description', $value, $id );
 	}
 
-	function tooltip( $value, $id = null ) {
+	public function tooltip( $value, $id = null ) {
 		return $this->set_argument( 'tooltip', $value, $id );
 	}
 
-	function multiple( $value = 1, $id = null ) {
+	public function multiple( $value = 1, $id = null ) {
 		return $this->set_argument( 'multiple', $value, $id );
 	}
 
-	function sanitize_callback( $value = 1, $id = null ) {
+	public function sanitize_callback( $value = 1, $id = null ) {
 		return $this->set_argument( 'sanitize_callback', $value, $id );
 	}
 
-	function transport( $type = 'auto', $id = null ) {
+	public function transport( $type = 'auto', $id = null ) {
 		return $this->set_argument( 'transport', $type, $id );
 	}
 
@@ -316,7 +316,7 @@ class WPCG_Customizer_Generator {
 	 *
 	 * @return $this|WPCG_Customizer_Generator
 	 */
-	function shortcut( $selector = null, $id = null ) {
+	public function shortcut( $selector = null, $id = null ) {
 		$id          = $this->the_current_setting( $id );
 		$selector    = is_string( $selector ) ? $selector : sprintf( $this->partial_selector_mask, $id );
 		$shortcut_id = sprintf( "%s-shortcut", $id );
@@ -344,7 +344,7 @@ class WPCG_Customizer_Generator {
 
 	}
 
-	function partial_refresh( $args = array(), $key = null, $id = null ) {
+	public function partial_refresh( $args = array(), $key = null, $id = null ) {
 		$id  = $this->the_current_setting( $id );
 		$key = $this->get_random_key( 'partial-%s', $key );
 
@@ -360,7 +360,7 @@ class WPCG_Customizer_Generator {
 		return $this->push_argument( 'partial_refresh', $args, $id, $key );
 	}
 
-	function output( $args = array(), $id = null ) {
+	public function output( $args = array(), $id = null ) {
 		$id = $this->the_current_setting( $id );
 
 		$defaults = array(
@@ -385,7 +385,7 @@ class WPCG_Customizer_Generator {
 		return $this->push_argument( 'output', $args )->transport();
 	}
 
-	function js_vars( $args = array(), $id = null ) {
+	public function js_vars( $args = array(), $id = null ) {
 		$id       = $this->the_current_setting( $id );
 		$defaults = array(
 			'function' => 'html',
@@ -404,7 +404,7 @@ class WPCG_Customizer_Generator {
 	 *
 	 * @return $this
 	 */
-	function save() {
+	public function save() {
 		$this->save_panels();
 		$this->save_sections();
 		$this->save_fields();
@@ -413,7 +413,7 @@ class WPCG_Customizer_Generator {
 	}
 
 	// Base Fields
-	function add( $id, $args = array() ) {
+	public function add( $id, $args = array() ) {
 		$defaults = apply_filters( 'wpcg_add_defaults', array(
 			'type'            => 'text',
 			'section'         => $this->current_section,
@@ -477,30 +477,30 @@ class WPCG_Customizer_Generator {
 	 *
 	 * @return WPCG_Customizer_Generator
 	 */
-	function add_message( $args = array(), $id = null ) {
+	public function add_message( $args = array(), $id = null ) {
 		$id = $this->get_random_message_id( $id );
 
 		return $this->add_field( $id, $args, 'custom', array( 'default', 'label', 'priority', 'description' ) );
 	}
 
 	// Text Fields
-	function add_text( $id, $args = array() ) {
+	public function add_text( $id, $args = array() ) {
 		return $this->add_field( $id, $args, 'text' )
 		            ->partial_refresh( array( $this->get_render_callback( 'text' ) ), $id )
 		            ->js_vars();
 	}
 
-	function add_textarea( $id, $args = array() ) {
+	public function add_textarea( $id, $args = array() ) {
 		return $this->add_field( $id, $args, 'textarea' )
 		            ->partial_refresh( array( $this->get_render_callback( 'editor' ) ), $id );
 	}
 
-	function add_editor( $id, $args = array() ) {
+	public function add_editor( $id, $args = array() ) {
 		return $this->add_field( $id, $args, 'editor' )
 		            ->partial_refresh( array( $this->get_render_callback( 'editor' ) ), $id );
 	}
 
-	function add_code( $id, $args = array() ) {
+	public function add_code( $id, $args = array() ) {
 		$args = self::parse_field_args( $args, array(
 			'type'     => 'code',
 			'language' => 'html',
@@ -513,7 +513,7 @@ class WPCG_Customizer_Generator {
 		return $this->add( $id, $args );
 	}
 
-	function add_number( $id, $args = array() ) {
+	public function add_number( $id, $args = array() ) {
 		$args = self::parse_field_args( $args, array(
 			'type' => 'number',
 			'min'  => - 999999999,
@@ -526,7 +526,7 @@ class WPCG_Customizer_Generator {
 		return $this->add( $id, $args );
 	}
 
-	function add_dimension( $id, $args = array() ) {
+	public function add_dimension( $id, $args = array() ) {
 		return $this->add_field( $id, $args, 'dimension' );
 	}
 
@@ -541,48 +541,48 @@ class WPCG_Customizer_Generator {
 		return $this->add_field( $id, $args, $defaults, $shortcut );
 	}
 
-	function add_select( $id, $args = array() ) {
+	public function add_select( $id, $args = array() ) {
 		return $this->add_choices_field( $id, $args, array( 'select', 1 ) );
 	}
 
-	function add_radio( $id, $args = array() ) {
+	public function add_radio( $id, $args = array() ) {
 		return $this->add_choices_field( $id, $args, 'radio' );
 	}
 
-	function add_multicheck( $id, $args = array() ) {
+	public function add_multicheck( $id, $args = array() ) {
 		return $this->add_choices_field( $id, $args, 'multicheck' );
 	}
 
-	function add_radio_image( $id, $args = array() ) {
+	public function add_radio_image( $id, $args = array() ) {
 		return $this->add_choices_field( $id, $args, 'radio-image' );
 	}
 
-	function add_radio_buttonset( $id, $args = array() ) {
+	public function add_radio_buttonset( $id, $args = array() ) {
 		return $this->add_choices_field( $id, $args, 'radio-buttonset' );
 	}
 
-	function add_palette( $id, $args = array() ) {
+	public function add_palette( $id, $args = array() ) {
 		return $this->add_choices_field( $id, $args, 'palette' );
 	}
 
-	function add_color_palette( $id, $args = array() ) {
+	public function add_color_palette( $id, $args = array() ) {
 		return $this->add_choices_field( $id, $args, 'color-palette' );
 	}
 
-	function add_sortable( $id, $args = array() ) {
+	public function add_sortable( $id, $args = array() ) {
 		return $this->add_choices_field( $id, $args, 'sortable' );
 	}
 
 	// Boolean Fields
-	function add_checkbox( $id, $args = array() ) {
+	public function add_checkbox( $id, $args = array() ) {
 		return $this->add_field( $id, $args, 'checkbox' );
 	}
 
-	function add_toggle( $id, $args = array() ) {
+	public function add_toggle( $id, $args = array() ) {
 		return $this->add_field( $id, $args, 'toggle' );
 	}
 
-	function add_switch( $id, $args = array() ) {
+	public function add_switch( $id, $args = array() ) {
 
 		$args = self::parse_field_args( $args, 'switch',
 			array( 'label', 'default', 'on', 'off', 'description', 'priority' ), array( 'on', 'off' ) );
@@ -592,44 +592,44 @@ class WPCG_Customizer_Generator {
 
 	// Other Fields
 
-	function add_image( $id, $args = array() ) {
+	public function add_image( $id, $args = array() ) {
 		return $this->add_field( $id, $args, 'image' )
 		            ->partial_refresh( array( $this->get_render_callback( 'image' ) ), $id );
 	}
 
-	function add_image_background( $id, $args = array() ) {
+	public function add_image_background( $id, $args = array() ) {
 		return $this->add_field( $id, $args, 'image' )
 		            ->output( 'background-image' );
 	}
 
-	function add_color( $id, $args = array() ) {
+	public function add_color( $id, $args = array() ) {
 		$args = self::parse_field_args( $args, 'color',
 			array( 'label', 'default', 'alpha', 'description', 'priority' ), 'alpha' );
 
 		return $this->add( $id, $args );
 	}
 
-	function add_color_text( $id, $args = array() ) {
+	public function add_color_text( $id, $args = array() ) {
 		return $this->add_color( $id, $args )->output( 'color' );
 	}
 
-	function add_color_background( $id, $args = array() ) {
+	public function add_color_background( $id, $args = array() ) {
 		return $this->add_color( $id, $args )->output( 'background-color' );
 	}
 
-	function add_dashicons( $id, $args = array() ) {
+	public function add_dashicons( $id, $args = array() ) {
 		return $this->add_field( $id, $args, 'dashicons' );
 	}
 
-	function add_upload( $id, $args = array() ) {
+	public function add_upload( $id, $args = array() ) {
 		return $this->add_field( $id, $args, 'upload' );
 	}
 
-	function add_dropdown_pages( $id, $args = array() ) {
+	public function add_dropdown_pages( $id, $args = array() ) {
 		return $this->add_field( $id, $args, 'dropdown-pages' );
 	}
 
-	function add_slider( $id, $args = array() ) {
+	public function add_slider( $id, $args = array() ) {
 		$args = self::parse_field_args( $args, 'slider',
 			array( 'label', 'default', 'min', 'max', 'step', 'description', 'priority' ),
 			array( 'min', 'max', 'step' ) );
@@ -637,15 +637,15 @@ class WPCG_Customizer_Generator {
 		return $this->add( $id, $args );
 	}
 
-	function add_spacing( $id, $args = array() ) {
+	public function add_spacing( $id, $args = array() ) {
 		return $this->add_field( $id, $args, 'spacing' );
 	}
 
-	function add_typography( $id, $args = array() ) {
+	public function add_typography( $id, $args = array() ) {
 		return $this->add_field( $id, $args, 'typography' );
 	}
 
-	function add_multicolor( $id, $args = array() ) {
+	public function add_multicolor( $id, $args = array() ) {
 		$args = self::parse_field_args( $args, 'multicolor',
 			array( 'label', 'default', 'link', 'hover', 'active', 'description', 'priority' ),
 			array( 'link', 'hover', 'active' ) );
@@ -656,7 +656,7 @@ class WPCG_Customizer_Generator {
 	/// Wrapped Fields
 
 	/// Save methods
-	function save_panels() {
+	public function save_panels() {
 		$panels = $this->divisions['panels'];
 		foreach ( $panels as $id => $panel ) {
 			if ( ! isset( $this->saved['panels'][ $id ] ) || ! $this->saved['panels'][ $id ] ) {
@@ -668,7 +668,7 @@ class WPCG_Customizer_Generator {
 		return $this;
 	}
 
-	function save_sections() {
+	public function save_sections() {
 		$sections = $this->divisions['sections'];
 		foreach ( $sections as $id => $section ) {
 			if ( ! isset( $this->saved['sections'][ $id ] ) || ! $this->saved['sections'][ $id ] ) {
@@ -680,7 +680,7 @@ class WPCG_Customizer_Generator {
 		return $this;
 	}
 
-	function save_fields() {
+	public function save_fields() {
 		$fields = $this->settings;
 		foreach ( $fields as $id => $field ) {
 			if ( ! isset( $this->saved['fields'][ $id ] ) || ! $this->saved['fields'][ $id ] ) {
@@ -701,7 +701,7 @@ class WPCG_Customizer_Generator {
 	 *
 	 * @return mixed
 	 */
-	function get_setting( $id = null, $default = false ) {
+	public function get_setting( $id = null, $default = false ) {
 		$id = $this->the_current_setting( $id );
 
 		if ( false === $default && isset( $this->settings[ $id ] ) ) {
@@ -719,7 +719,7 @@ class WPCG_Customizer_Generator {
 	 *
 	 * @param string $id
 	 */
-	function the_setting( $id = null ) {
+	public function the_setting( $id = null ) {
 		$id     = $this->the_current_setting( $id );
 		$render = array( $this, 'render_text' );
 		if ( isset( $this->settings[ $id ], $this->settings[ $id ]['partial_refresh'][ $id ] ) ) {
@@ -735,7 +735,7 @@ class WPCG_Customizer_Generator {
 	 *
 	 * @return string
 	 */
-	function get_setting_attributes( $setting = null ) {
+	public function get_setting_attributes( $setting = null ) {
 		$setting = WPCG_Helper::array_argument( $this->the_current_setting( $setting ) );
 
 		return sprintf( $this->setting_attribute_mask, implode( ' ', $setting ) );
@@ -746,13 +746,13 @@ class WPCG_Customizer_Generator {
 	 *
 	 * @param string|array|null $setting The setting ID, or array of settings IDs, or NULL if the current Setting
 	 */
-	function setting_attributes( $setting = null ) {
+	public function setting_attributes( $setting = null ) {
 		echo $this->get_setting_attributes( $setting );
 	}
 
 	// Internal and logic functions
 
-	function the_current_setting( $setting = null ) {
+	public function the_current_setting( $setting = null ) {
 		if ( $setting ) {
 			// avoid error when multiple settings given
 			$this->current_setting = explode( ' ', $setting )[0];
@@ -762,7 +762,7 @@ class WPCG_Customizer_Generator {
 
 	}
 
-	function set_wp_customize( $customize = null ) {
+	public function set_wp_customize( $customize = null ) {
 		if ( ! $customize ) {
 			global $wp_customize;
 			$customize = $wp_customize ? $wp_customize : $this->wp_customize;
@@ -770,11 +770,11 @@ class WPCG_Customizer_Generator {
 		$this->wp_customize = $customize;
 	}
 
-	function set_current_field( $id ) {
+	public function set_current_field( $id ) {
 		$this->current_setting = $id;
 	}
 
-	function get_current_field() {
+	public function get_current_field() {
 		return $this->current_setting;
 	}
 
@@ -838,7 +838,7 @@ class WPCG_Customizer_Generator {
 		return $this->get_random_key( 'message-%s', $id );
 	}
 
-	function has_partial() {
+	public function has_partial() {
 		return isset( $this->wp_customize->selective_refresh );
 	}
 
@@ -862,7 +862,7 @@ class WPCG_Customizer_Generator {
 		}
 	}
 
-	function get_output( $id, $output = array(), $merge = false ) {
+	public function get_output( $id, $output = array(), $merge = false ) {
 		// if passed an array of outputs
 		if ( WPCG_Helper::is_matrix( $output ) ) {
 			$fields = array();
@@ -905,7 +905,7 @@ class WPCG_Customizer_Generator {
 
 	}
 
-	function get_selector( $id ) {
+	public function get_selector( $id ) {
 		return sprintf( $this->partial_selector_mask, $id );
 	}
 
@@ -923,7 +923,7 @@ class WPCG_Customizer_Generator {
 	}
 
 
-	function get_partial_setting( $partial ) {
+	public function get_partial_setting( $partial ) {
 		return $this->get_setting( WPCG_Helper::get_partial_id( $partial ) );
 	}
 
@@ -936,7 +936,7 @@ class WPCG_Customizer_Generator {
 	 *
 	 * @return string|false
 	 */
-	function render_text( $partial ) {
+	public function render_text( $partial ) {
 		return nl2br( $this->get_partial_setting( $partial ) );
 	}
 
@@ -947,7 +947,7 @@ class WPCG_Customizer_Generator {
 	 *
 	 * @return string|false
 	 */
-	function render_image( $partial ) {
+	public function render_image( $partial ) {
 
 		$value = $this->get_partial_setting( $partial );
 		if ( ! $value ) {
@@ -964,7 +964,7 @@ class WPCG_Customizer_Generator {
 	 *
 	 * @return string|false
 	 */
-	function render_html( $partial ) {
+	public function render_html( $partial ) {
 		return apply_filters( 'the_content', $this->get_partial_setting( $partial ) );
 	}
 
@@ -973,7 +973,7 @@ class WPCG_Customizer_Generator {
 	 *
 	 * @param WP_Customize_Partial $partial
 	 */
-	function render_debug( $partial ) {
+	public function render_debug( $partial ) {
 		var_dump( $partial );
 	}
 
@@ -987,7 +987,7 @@ class WPCG_Customizer_Generator {
 	 *
 	 * @return $this
 	 */
-	function add_setting( $id, $args = array() ) {
+	public function add_setting( $id, $args = array() ) {
 
 		$this->wp_customize->add_setting( $id, $args );
 
@@ -1004,7 +1004,7 @@ class WPCG_Customizer_Generator {
 	 *
 	 * @return $this
 	 */
-	function add_control( $id = true, $args = array() ) {
+	public function add_control( $id = true, $args = array() ) {
 
 		// when true, the current setting will be used
 		if ( $id === true ) {
@@ -1048,7 +1048,7 @@ class WPCG_Customizer_Generator {
 	 *
 	 * @return $this
 	 */
-	function add_partial( $id = false, $args = array() ) {
+	public function add_partial( $id = false, $args = array() ) {
 		if ( ! $this->has_partial() ) {
 			return $this;
 		}
