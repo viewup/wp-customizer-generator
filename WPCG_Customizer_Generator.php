@@ -394,7 +394,7 @@ class WPCG_Customizer_Generator {
 		);
 		$args     = WPCG_Helper::parse_arguments( $defaults, WPCG_Helper::parse_indexed_arguments( $args, array_keys( $defaults ) ) );
 
-		return $this->push_argument( 'js_vars', $args, $id )->transport('postMessage');
+		return $this->push_argument( 'js_vars', $args, $id )->transport( 'postMessage' );
 	}
 
 	/**
@@ -699,7 +699,7 @@ class WPCG_Customizer_Generator {
 	 * @param string $id
 	 * @param bool $default Setting Default(if not set, uses the defined default)
 	 *
-	 * @return string
+	 * @return mixed
 	 */
 	function get_setting( $id = null, $default = false ) {
 		$id = $this->the_current_setting( $id );
@@ -754,7 +754,8 @@ class WPCG_Customizer_Generator {
 
 	function the_current_setting( $setting = null ) {
 		if ( $setting ) {
-			$this->current_setting = $setting;
+			// avoid error when multiple settings given
+			$this->current_setting = explode( ' ', $setting )[0];
 		}
 
 		return $this->current_setting;

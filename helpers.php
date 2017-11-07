@@ -19,7 +19,7 @@ function wpcg_get() {
  * @param string $id
  * @param bool $default Setting Default(if not set, uses the defined default)
  *
- * @return string
+ * @return mixed
  */
 function wpcg_get_setting( $id = null, $default = false ) {
 	return wpcg_get()->get_setting( $id, $default );

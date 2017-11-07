@@ -172,6 +172,24 @@ class WPCG_Helper {
 		return sanitize_title( $string );
 	}
 
+	/**
+	 * Fix Image on repeaters
+	 *
+	 * Repeater Images can be an Id or an URL.
+	 * This function detects and fix to always return an URL (or empty string if not set).
+	 *
+	 * @param string $id - The image ID or URL
+	 *
+	 * @return string
+	 */
+	static function fix_image_url( $id = '' ) {
+		if ( is_numeric( $id ) ) {
+			return wp_get_attachment_url( (int) $id );
+		}
+
+		return $id ? $id : '';
+	}
+
 	// Kirki Wrapped methods
 	static function get_posts( $args ) {
 		return Kirki_Helper::get_posts( $args );
