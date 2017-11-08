@@ -368,18 +368,9 @@ class WPCG_Customizer_Generator {
 			'units'    => '',
 			'element'  => $this->get_selector( $id ),
 			'prefix'   => '',
-			'suffix'    => '',
+			'suffix'   => '',
 		);
-
-		if ( is_string( $args ) ) {
-			switch ( $args ) {
-				case 'background-image':
-					$defaults['prefix'] = "url('";
-					$defaults['suffix']  = "')";
-					break;
-			}
-		}
-
+		
 		$args = WPCG_Helper::parse_arguments( $defaults, WPCG_Helper::parse_indexed_arguments( $args, array_keys( $defaults ) ) );
 
 		return $this->push_argument( 'output', $args )->transport();
