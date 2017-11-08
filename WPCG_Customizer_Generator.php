@@ -366,16 +366,16 @@ class WPCG_Customizer_Generator {
 		$defaults = array(
 			'property' => 'color',
 			'units'    => '',
-			'element'  => $this->get_selector( $id )
+			'element'  => $this->get_selector( $id ),
+			'prefix'   => '',
+			'suffix'    => '',
 		);
 
 		if ( is_string( $args ) ) {
 			switch ( $args ) {
 				case 'background-image':
-					$defaults = array(
-						'prefix' => "url('",
-						'sufix'  => "')"
-					);
+					$defaults['prefix'] = "url('";
+					$defaults['suffix']  = "')";
 					break;
 			}
 		}
