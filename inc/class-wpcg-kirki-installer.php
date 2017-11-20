@@ -50,20 +50,20 @@ if ( ! class_exists( 'Kirki' ) ) {
                     class="<?php echo esc_attr( $classes ); ?>"
                     style="border-top:none;border-bottom:1px solid #ddd;padding:7px 14px 16px 14px;text-align:right;">
 					<?php if ( ! $installed ) : ?>
-                        <p style="text-align:left;margin-top:0;"><?php esc_attr_e( 'Please install the Kirki plugin to take full advantage of this theme\s customizer capabilities', 'textdomain' ); ?></p>
+                        <p style="text-align:left;margin-top:0;"><?php esc_attr_e( 'Please install the Kirki plugin to take full advantage of this theme\s customizer capabilities', '_s' ); ?></p>
                         <a class="install-now button-primary button" data-slug="kirki"
                            href="<?php echo esc_url_raw( $plugin_install_url ); ?>"
-                           aria-label="<?php esc_attr_e( 'Install Kirki Toolkit now', 'textdomain' ); ?>"
+                           aria-label="<?php esc_attr_e( 'Install Kirki Toolkit now', '_s' ); ?>"
                            data-name="Kirki Toolkit">
-							<?php esc_html_e( 'Install Now', 'textdomain' ); ?>
+							<?php esc_html_e( 'Install Now', '_s' ); ?>
                         </a>
 					<?php else : ?>
-                        <p style="text-align:left;margin-top:0;"><?php esc_attr_e( 'You have installed Kirki. Activate it to take advantage of this theme\'s features in the customizer.', 'textdomain' ); ?></p>
+                        <p style="text-align:left;margin-top:0;"><?php esc_attr_e( 'You have installed Kirki. Activate it to take advantage of this theme\'s features in the customizer.', '_s' ); ?></p>
                         <a class="install-now button-secondary button change-theme" data-slug="kirki"
                            href="<?php echo esc_url_raw( self_admin_url( 'plugins.php' ) ); ?>"
-                           aria-label="<?php esc_attr_e( 'Activate Kirki Toolkit now', 'textdomain' ); ?>"
+                           aria-label="<?php esc_attr_e( 'Activate Kirki Toolkit now', '_s' ); ?>"
                            data-name="Kirki Toolkit">
-							<?php esc_html_e( 'Activate Now', 'textdomain' ); ?>
+							<?php esc_html_e( 'Activate Now', '_s' ); ?>
                         </a>
 					<?php endif; ?>
                 </li>
