@@ -370,7 +370,7 @@ class WPCG_Customizer_Generator {
 			'prefix'   => '',
 			'suffix'   => '',
 		);
-		
+
 		$args = WPCG_Helper::parse_arguments( $defaults, WPCG_Helper::parse_indexed_arguments( $args, array_keys( $defaults ) ) );
 
 		return $this->push_argument( 'output', $args )->transport();
@@ -1070,7 +1070,7 @@ class WPCG_Customizer_Generator {
 	 *
 	 * @return WPCG_Customizer_Generator
 	 */
-	static function get_instance( $customize = null, $args = array() ) {
+	public static function get_instance( $customize = null, $args = array() ) {
 		return new WPCG_Customizer_Generator( $customize, $args );
 	}
 
@@ -1079,7 +1079,7 @@ class WPCG_Customizer_Generator {
 	 *
 	 * initialize an global instance
 	 */
-	static function init() {
+	public static function init() {
 		global $wpcg_customize;
 
 		$wpcg_customize = self::get_instance();
@@ -1087,5 +1087,56 @@ class WPCG_Customizer_Generator {
 		do_action( 'wpcg_customize_register', $wpcg_customize );
 
 		$wpcg_customize->save();
+	}
+
+	private static function var_export( $var ) {
+		ob_start();
+		var_export( $var );
+
+		return ob_get_clean();
+	}
+
+	/**
+	 * Export kirki code function
+	 */
+	public function export() {
+		$export = '<h1>exported WPCG code:</h1>
+<pre style="background: #e8e8e8; padding: 1em; max-height: calc(100vh - 300px); overflow: auto;" onclick="prompt(\'Copy to clipboard.\', this.innerText)">
+&lt;?php
+';
+		// panels
+		$panels = $this->divisions['panels'];
+		if ( count( $panels ) ) {
+			$export .= "\n/**\n * Panels\n */\n";
+			foreach ( $panels as $id => $panel ) {
+				$id     = self::var_export( $id );
+				$code   = self::var_export( $panel );
+				$export .= "Kirki::add_panel( {$id}, $code);\n\n";
+			}
+		}
+
+		// sections
+		$sections = $this->divisions['sections'];
+		if ( count( $sections ) ) {
+			$export .= "\n/**\n * Sections\n */\n";
+			foreach ( $sections as $id => $section ) {
+				$id     = self::var_export( $id );
+				$code   = self::var_export( $section );
+				$export .= "Kirki::add_section( {$id}, $code);\n\n";
+			}
+		}
+
+		$fields = $this->settings;
+		if ( count( $sections ) ) {
+			$export .= "\n/**\n * Fields\n */\n";
+			foreach ( $fields as $id => $field ) {
+				$id     = self::var_export( $id );
+				$code   = self::var_export( $field );
+				$export .= "Kirki::add_field( {$id}, $code);\n\n";
+			}
+		}
+
+		$export .= '</pre><small>Click to copy to clipboard. <br /><strong>Note:</strong>class instances may have been exported.</small>';
+		wp_die( $export, 'Exports WPCG code' );
 	}
 }
