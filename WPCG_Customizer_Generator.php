@@ -1089,7 +1089,15 @@ class WPCG_Customizer_Generator {
 		$wpcg_customize->save();
 	}
 
-	private static function var_export( $var ) {
+	private static function var_export( $var = null ) {
+		if ( is_array( $var ) ) {
+			foreach ( $var as $key => $value ) {
+				if ( ! $value && $value !== false ) {
+					unset( $var[ $key ] );
+				}
+			}
+			ksort( $var );
+		}
 		ob_start();
 		var_export( $var );
 
