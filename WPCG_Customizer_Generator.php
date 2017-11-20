@@ -811,8 +811,8 @@ class WPCG_Customizer_Generator {
 	}
 
 	private static function Kirki( $method, $arg1 = null, $arg2 = null ) {
-		if ( class_exists( 'Kirki' ) ) {
-			call_user_func( "Kirki::{$method}", $arg1, $arg2 );
+		if ( class_exists( 'WPCG_Kirki' ) ) {
+			call_user_func( "WPCG_Kirki::{$method}", $arg1, $arg2 );
 		}
 	}
 

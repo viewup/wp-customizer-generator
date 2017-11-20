@@ -1,4 +1,0 @@
-[submodule "kirki"]
-    shallow = true
-	path = kirki
-	url = git@github.com:aristath/kirki.git

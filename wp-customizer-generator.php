@@ -9,10 +9,12 @@ Author: Viewup
 Text Domain: wpcg
 */
 
-define( 'WPCG_PATH', __DIR__ );
+defined( 'WPCG_PATH' ) or define( 'WPCG_PATH', __DIR__ );
+// Kirki Fallback
+include_once WPCG_PATH . '/inc/class-wpcg-kirki.php';
 
-// Kirki dependency
-@include_once WPCG_PATH . '/kirki/kirki.php';
+// Kirki Installer
+include_once WPCG_PATH . '/inc/class-wpcg-kirki-installer.php';
 
 // Customizer Helper
 require_once WPCG_PATH . '/WPCG_Helper.php';
