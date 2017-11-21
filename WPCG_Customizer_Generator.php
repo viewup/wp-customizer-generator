@@ -283,6 +283,10 @@ class WPCG_Customizer_Generator {
 		return $this->set_argument( 'label', $value, $id );
 	}
 
+	public function type( $value, $id = null ) {
+		return $this->set_argument( 'type', $value, $id );
+	}
+
 	public function description( $value, $id = null ) {
 		return $this->set_argument( 'description', $value, $id );
 	}
