@@ -960,7 +960,7 @@ class WPCG_Customizer_Generator {
 	 * @return string|false
 	 */
 	public function render_html( $partial ) {
-		return apply_filters( 'the_content', $this->get_partial_setting( $partial ) );
+		return do_shortcode( shortcode_unautop( $this->get_partial_setting( $partial ) ) );
 	}
 
 	/**
